@@ -1,6 +1,3 @@
-#define GL_LITE_IMPLEMENTATION
-#include "gl_lite.h"
-
 #define ASSERT(aCondition){ if(!aCondition) { int* ___ptr = nullptr; *___ptr = 0;}}
 
 #include <stdio.h>
@@ -8,6 +5,17 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+
+#include "gfx_interface.h"
+
+//#define USE_DIRECTX
+
+#ifdef USE_DIRECTX
+#include "directx.cpp"
+#else
+#include "opengl.cpp"
+#endif
+
 
 const char *vertexShaderSource = "#version 330 core\n"
 "layout (location = 0) in vec3 aPos;\n"
@@ -35,143 +43,16 @@ const char *fragmentShaderSource = "#version 330 core\n"
 //"   FragColor = vec4(vertexColor, 1.f); \n"
 "}\n\0";
 
-unsigned int ourShaderProgram;
-unsigned int ourVertexArray;
-unsigned int ourTexture1;
-unsigned int ourTexture2;
-
-void DrawOpenGL()
+unsigned int LoadTexture(bool aUseAlpha, const char* aFilePath)
 {
-    glBegin(GL_TRIANGLES);
-    
-    glColor3f(1.0f, 0.0f, 0.0f);
-    glVertex2i(0,  1);
-    
-    glColor3f(0.0f, 1.0f, 0.0f);
-    glVertex2i(-1, -1);
-    
-    glColor3f(0.0f, 0.0f, 1.0f);
-    glVertex2i(1, -1);
-    
-    glEnd();
-}
-
-void VerifyShader(unsigned int aShaderID)
-{
-    int success = 0;
-    glGetShaderiv(aShaderID, GL_COMPILE_STATUS, &success);
-    if(!success)
-    {
-        char infoLog[512];
-        glGetShaderInfoLog(aShaderID, 512, NULL, infoLog);
-        ASSERT(false);
-    }
-}
-
-void VerifyShaderProgram(unsigned aShaderProgramID)
-{
-    int success = 0;
-    glGetProgramiv(aShaderProgramID, GL_LINK_STATUS, &success);
-    if(!success)
-    {
-        char infoLog[512];
-        glGetProgramInfoLog(aShaderProgramID, 512, NULL, infoLog);
-        ASSERT(false);
-    }
-}
-
-void CreateOpenGLModel()
-{
-    glGenVertexArrays(1, &ourVertexArray);
-    glBindVertexArray(ourVertexArray);
-    
-    // Create our Vertices
-    float size = 0.5f;
-    float vertices[] = {
-        // position         // colors            //UVs
-         size,  size, 0.f,   1.f,  0.f,  0.f,    1.f, 1.0f,  // topright
-         size, -size, 0.f,   0.f,  1.f,  0.f,    1.f, 0.f,   // bottomright
-        -size, -size, 0.f,   0.f,  0.f,  1.f,    0.f, 0.f,   // bottomleft
-        -size,  size, 0.f,   0.2f, 0.2f, 0.2f,   0.f, 1.f     // topleft
-    };
-    
-    unsigned int indices[] = {
-        0, 1, 3,
-        1, 2, 3
-    };
-    
-    // Create a VertexBuffer
-    unsigned int vertexBufferObject;
-    glGenBuffers(1, &vertexBufferObject);
-    glBindBuffer(GL_ARRAY_BUFFER, vertexBufferObject);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    
-    // Create a IndexBuffer
-    unsigned int elementBufferObject;
-    glGenBuffers(1, &elementBufferObject);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBufferObject);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-    
-    // Compile our VertexShader
-    unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-    glCompileShader(vertexShader);
-    VerifyShader(vertexShader);
-    
-    // Compile our FragmentShader
-    unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
-    glCompileShader(fragmentShader);
-    VerifyShader(fragmentShader);
-    
-    // Link our Vertex and Fragment Shaders
-    ourShaderProgram = glCreateProgram();
-    glAttachShader(ourShaderProgram, vertexShader);
-    glAttachShader(ourShaderProgram, fragmentShader);
-    glLinkProgram(ourShaderProgram);
-    VerifyShaderProgram(ourShaderProgram);
-
-    // After we have linked the shaders, we dont need the objects anymore
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
-    
-    
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-    glEnableVertexAttribArray(2);    
-    
-
-    stbi_set_flip_vertically_on_load(true);
-    glGenTextures(1, &ourTexture1);
-    glBindTexture(GL_TEXTURE_2D, ourTexture1);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     int width, height, nrChannels;
-    unsigned char* data = stbi_load("container.jpg", &width, &height, &nrChannels, 0);
+    unsigned char* data = stbi_load(aFilePath, &width, &height, &nrChannels, 0);
     ASSERT(data != NULL);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+    
+    unsigned int texture = gfx_CreateTexture(width, height, aUseAlpha, data);
     
     stbi_image_free(data);
-    
-    glGenTextures(1, &ourTexture2);
-    glBindTexture(GL_TEXTURE_2D, ourTexture2);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    data = stbi_load("awesomeface.png", &width, &height, &nrChannels, 0);
-    ASSERT(data != NULL);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-    
-    stbi_image_free(data);
+    return texture;
 }
 
 LRESULT CALLBACK WndProc(HWND aHwnd, UINT aMessage, WPARAM aWParam, LPARAM aLParam)
@@ -197,10 +78,8 @@ LRESULT CALLBACK WndProc(HWND aHwnd, UINT aMessage, WPARAM aWParam, LPARAM aLPar
         {
             return 0;
         }
-		//case WM_CHAR:			msg.myType = CE_WindowMessage::CHARACTER; break;
     }
     
-   // return 0;
     return DefWindowProcA(aHwnd, aMessage, aWParam, aLParam);
 }
 
@@ -242,45 +121,11 @@ HWND Win32CreateWindow(const char* aTitle, int aWindowWidth, int aWindowHeight)
         NULL);
     
     ASSERT(windowHandle != NULL);
+    
+    ShowWindow(windowHandle, 10);
+    UpdateWindow(windowHandle);
+    
     return windowHandle;
-}
-
-void Win32InitOpenGL(HWND aWindowHandle)
-{
-    HDC windowDC = GetDC(aWindowHandle);
-    PIXELFORMATDESCRIPTOR desiredPixelFormat = {};
-    desiredPixelFormat.nSize = sizeof(desiredPixelFormat);
-    desiredPixelFormat.nVersion = 1;
-    desiredPixelFormat.iPixelType = PFD_TYPE_RGBA;
-    desiredPixelFormat.dwFlags = PFD_SUPPORT_OPENGL|PFD_DRAW_TO_WINDOW;
-    desiredPixelFormat.cColorBits = 32;
-    desiredPixelFormat.cAlphaBits = 8;
-    desiredPixelFormat.iLayerType = PFD_MAIN_PLANE;
-    
-    int suggestedPixelFormatIndex = ChoosePixelFormat(windowDC, &desiredPixelFormat);
-    
-    PIXELFORMATDESCRIPTOR suggestedPixelFormat;
-    DescribePixelFormat(windowDC, suggestedPixelFormatIndex, sizeof(suggestedPixelFormat), &suggestedPixelFormat);
-    SetPixelFormat(windowDC, suggestedPixelFormatIndex, &suggestedPixelFormat);
-    
-    HGLRC openGLRC = wglCreateContext(windowDC);
-    if(wglMakeCurrent(windowDC, openGLRC))
-    {
-        // Yay, we got a OpenGL-context!
-    }
-    else
-    {
-        ASSERT(false);
-    }
-    
-    if(gl_lite_init())
-    {
-        // Yay, we managed to init GLAD
-    }
-    else
-    {
-        ASSERT(false);
-    }
 }
 
 int main(int argc, char** argv)
@@ -290,23 +135,24 @@ int main(int argc, char** argv)
     const int windowWidth = 1280;
     const int windowHeight = 720;
     HWND windowHandle = Win32CreateWindow(windowTitle, windowWidth, windowHeight);
-    Win32InitOpenGL(windowHandle);
-    ShowWindow(windowHandle, 10);
-    UpdateWindow(windowHandle);
+    gfx_Init(windowHandle);
+   
+    stbi_set_flip_vertically_on_load(true); 
+    unsigned int texture1 = LoadTexture(false, "container.jpg");
+    unsigned int texture2  = LoadTexture(true, "awesomeface.png");
     
-    CreateOpenGLModel();
-    glViewport(0, 0, windowWidth, windowHeight);
+    unsigned int shaderProgram = gfx_CreateShader(vertexShaderSource, fragmentShaderSource);
+    
+    gfx_Viewport(0, 0, windowWidth, windowHeight);
+    gfx_ClearColor(0.8f, 0.2f, 0.f);
+    
+    gfx_BindShader(shaderProgram);
+
+    gfx_ShaderConstanti(shaderProgram, "ourTexture1", 0);
+    gfx_ShaderConstanti(shaderProgram, "ourTexture2", 1);
     
     MSG msg = {};
     bool isRunning = true;
-    HDC deviceContext = GetDC(windowHandle);
- 
-   
-    glClearColor(1.f, 0.f, 0.f, 1.f);
-    glUseProgram(ourShaderProgram);
-    glUniform1i(glGetUniformLocation(ourShaderProgram, "ourTexture1"), 0);
-    glUniform1i(glGetUniformLocation(ourShaderProgram, "ourTexture2"), 1);
-    
     while(isRunning)
     {
         if(PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
@@ -319,17 +165,13 @@ int main(int argc, char** argv)
             DispatchMessage(&msg);
         }
  
-        glClear(GL_COLOR_BUFFER_BIT);
+        gfx_Clear();
         
+        gfx_BindTexture(texture1, 0);
+        gfx_BindTexture(texture2, 1);
+        gfx_DrawQuad();
         
-        glActiveTexture(GL_TEXTURE0+0);
-        glBindTexture(GL_TEXTURE_2D, ourTexture1);
-        glActiveTexture(GL_TEXTURE0+1);
-        glBindTexture(GL_TEXTURE_2D, ourTexture2);
-        glBindVertexArray(ourVertexArray);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-        
-        glFinish();
+        gfx_FinishFrame();
     }
     
     return 0;
