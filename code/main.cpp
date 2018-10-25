@@ -16,6 +16,10 @@
 #include "opengl.cpp"
 #endif
 
+#define CORBET
+#ifdef CORBET
+#include "corbet.cpp"
+#endif
 
 const char *vertexShaderSource = "#version 330 core\n"
 "layout (location = 0) in vec3 aPos;\n"
@@ -60,7 +64,7 @@ LRESULT CALLBACK WndProc(HWND aHwnd, UINT aMessage, WPARAM aWParam, LPARAM aLPar
     switch (aMessage)
     {
 		case WM_PAINT:
-        {
+        { 
             PAINTSTRUCT ps;
             BeginPaint(aHwnd, &ps);
             EndPaint(aHwnd, &ps);
@@ -128,6 +132,41 @@ HWND Win32CreateWindow(const char* aTitle, int aWindowWidth, int aWindowHeight)
     return windowHandle;
 }
 
+#ifdef CORBET
+int main(int argc, char** argv)
+{
+    const char* windowTitle = "Dual Engine";
+    
+    const int windowWidth = 1280;
+    const int windowHeight = 720;
+    HWND windowHandle = Win32CreateWindow(windowTitle, windowWidth, windowHeight);
+    gfx_Init(windowHandle);
+    
+    MSG msg = {};
+    bool isRunning = true;
+    
+    corbetSetWindowSize(windowWidth, windowHeight);
+    corbetInit();
+    
+    while(isRunning)
+    {
+        if(PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+        {
+            UINT msgCode = msg.message;
+            if(msgCode == WM_QUIT || msgCode == WM_DESTROY)
+                isRunning = false;
+            
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
+        
+        corbetUpdate();
+        corbetRender();
+    }
+    
+    return 0;
+}
+#else
 int main(int argc, char** argv)
 {
     const char* windowTitle = "Dual Engine";
@@ -137,22 +176,24 @@ int main(int argc, char** argv)
     HWND windowHandle = Win32CreateWindow(windowTitle, windowWidth, windowHeight);
     gfx_Init(windowHandle);
    
-    stbi_set_flip_vertically_on_load(true); 
-    unsigned int texture1 = LoadTexture(false, "container.jpg");
-    unsigned int texture2  = LoadTexture(true, "awesomeface.png");
+    //stbi_set_flip_vertically_on_load(true); 
+    //unsigned int texture1 = LoadTexture(false, "container.jpg");
+    //unsigned int texture2  = LoadTexture(true, "awesomeface.png");
     
-    unsigned int shaderProgram = gfx_CreateShader(vertexShaderSource, fragmentShaderSource);
+    //unsigned int shaderProgram = gfx_CreateShader(vertexShaderSource, fragmentShaderSource);
     
-    gfx_Viewport(0, 0, windowWidth, windowHeight);
-    gfx_ClearColor(0.8f, 0.2f, 0.f);
+    //gfx_Viewport(0, 0, windowWidth, windowHeight);
+    //gfx_ClearColor(0.8f, 0.2f, 0.f);
     
-    gfx_BindShader(shaderProgram);
+    //gfx_BindShader(shaderProgram);
 
-    gfx_ShaderConstanti(shaderProgram, "ourTexture1", 0);
-    gfx_ShaderConstanti(shaderProgram, "ourTexture2", 1);
+    //gfx_ShaderConstanti(shaderProgram, "ourTexture1", 0);
+    //gfx_ShaderConstanti(shaderProgram, "ourTexture2", 1);
     
     MSG msg = {};
     bool isRunning = true;
+    
+    
     while(isRunning)
     {
         if(PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
@@ -165,14 +206,67 @@ int main(int argc, char** argv)
             DispatchMessage(&msg);
         }
  
-        gfx_Clear();
+        //gfx_Clear();
         
-        gfx_BindTexture(texture1, 0);
-        gfx_BindTexture(texture2, 1);
-        gfx_DrawQuad();
+        //gfx_BindTexture(texture1, 0);
+        //gfx_BindTexture(texture2, 1);
+        //gfx_DrawQuad();
+    
+        //gfx_FinishFrame();
+      
+        glViewport(0, 0, windowWidth, windowHeight);
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);      
         
-        gfx_FinishFrame();
+        
+        glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        gluPerspective(90.0, windowWidth/(double)windowHeight, 0.1, 100.0);
+        
+        
+        glMatrixMode(GL_MODELVIEW);
+        glLoadIdentity();
+        
+        // This sets the position and direction of the camera
+        // Place the camera at: 0, 0, 0
+        // Point the camera towards: 0, 0, 10 (so make it point forward)
+        // and we use Y as our up-axis
+        gluLookAt(0, 0, 0,
+                  0, 0, 10,
+                  0, 1, 0);
+        
+      
+        // Start the translations that are specific to the Quad
+        glPushMatrix();
+      
+        // Move it away from the camera
+        float distanceFromCamera = 2.f;
+        glTranslatef(0.f, 0.f, distanceFromCamera);
+        
+        // Rotate it away from the camera
+        glRotatef(30, 1, 0, 0);
+        
+        glBegin(GL_QUADS);
+        
+        glColor3f(1.0f, 0.0f,0.0f);
+        float size = 0.5f;
+        
+        glVertex3f(-size, -size, 0.f);
+        glVertex3f( size, -size, 0.f);
+        glVertex3f( size,  size, 0.f);
+        glVertex3f(-size,  size, 0.f);
+        
+        glEnd();
+        
+        // Stop the translations for the Quad
+        glPopMatrix();
+        
+        
+        // Push all the commands to the GPU
+        glFinish();
+        
     }
     
     return 0;
 }
+#endif
