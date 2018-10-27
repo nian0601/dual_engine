@@ -49,44 +49,44 @@ void renderCube(const Vector3f& aPosition, const Vector3f& aSize, const Vector3f
     // Top
     glColor3f(0.0f, 1.0f,0.0f);
     glVertex3f(-halfWidth, halfHeight, -halfDepth);
-	glVertex3f(halfWidth, halfHeight, -halfDepth);
-	glVertex3f(halfWidth, halfHeight, halfDepth);
-	glVertex3f(-halfWidth, halfHeight, halfDepth);
+    glVertex3f(halfWidth, halfHeight, -halfDepth);
+    glVertex3f(halfWidth, halfHeight, halfDepth);
+    glVertex3f(-halfWidth, halfHeight, halfDepth);
 
 	// Bottom
     glColor3f(0.0f, 0.7f,0.2f);
-	glVertex3f(-halfWidth, -halfHeight, -halfDepth);
-	glVertex3f(halfWidth, -halfHeight, -halfDepth);
+    glVertex3f(-halfWidth, -halfHeight, -halfDepth);
+    glVertex3f(halfWidth, -halfHeight, -halfDepth);
     glVertex3f(halfWidth, -halfHeight, halfDepth);
     glVertex3f(-halfWidth, -halfHeight, halfDepth);
 
 	// Left
     glColor3f(1.0f, 0.0f,0.0f);
-	glVertex3f(-halfWidth, -halfHeight, halfDepth);
-	glVertex3f(-halfWidth, -halfHeight, -halfDepth);
-	glVertex3f(-halfWidth, halfHeight, -halfDepth);
-	glVertex3f(-halfWidth, halfHeight, halfDepth);
+    glVertex3f(-halfWidth, -halfHeight, halfDepth);
+    glVertex3f(-halfWidth, -halfHeight, -halfDepth);
+    glVertex3f(-halfWidth, halfHeight, -halfDepth);
+    glVertex3f(-halfWidth, halfHeight, halfDepth);
 
 	// Right
     glColor3f(0.7f, 0.2f,0.0f);
-	glVertex3f(halfWidth, -halfHeight, halfDepth);
+    glVertex3f(halfWidth, -halfHeight, halfDepth);
     glVertex3f(halfWidth, -halfHeight, -halfDepth);
-	glVertex3f(halfWidth, halfHeight, -halfDepth);
-	glVertex3f(halfWidth, halfHeight, halfDepth);
+    glVertex3f(halfWidth, halfHeight, -halfDepth);
+    glVertex3f(halfWidth, halfHeight, halfDepth);
 
 	// Front
     glColor3f(0.0f, 0.0f, 1.0f);
-	glVertex3f(-halfWidth, -halfHeight, -halfDepth);
-	glVertex3f(halfWidth, -halfHeight, -halfDepth);
-	glVertex3f(halfWidth, halfHeight, -halfDepth);
-	glVertex3f(-halfWidth, halfHeight, -halfDepth);
+    glVertex3f(-halfWidth, -halfHeight, -halfDepth);
+    glVertex3f(halfWidth, -halfHeight, -halfDepth);
+    glVertex3f(halfWidth, halfHeight, -halfDepth);
+    glVertex3f(-halfWidth, halfHeight, -halfDepth);
 
 	// Back
     glColor3f(0.2f, 0.0f, 0.7f);
-	glVertex3f(-halfWidth, -halfHeight, halfDepth);
-	glVertex3f(halfWidth, -halfHeight, halfDepth);
-	glVertex3f(halfWidth, halfHeight, halfDepth);
-	glVertex3f(-halfWidth, halfHeight, halfDepth);
+    glVertex3f(-halfWidth, -halfHeight, halfDepth);
+    glVertex3f(halfWidth, -halfHeight, halfDepth);
+    glVertex3f(halfWidth, halfHeight, halfDepth);
+    glVertex3f(-halfWidth, halfHeight, halfDepth);
     
     glEnd();
     
@@ -103,7 +103,6 @@ void renderLine(const Vector3f& aStart, const Vector3f& aEnd)
     
     glEnd();
 }
-
 
 void renderRoad()
 {
@@ -231,13 +230,10 @@ void corbetRender()
     
     renderRoad();
     
-    // Draw all the Cars
     for(int i = 0; i < ourGameState.myNumberOfCars; ++i)
         renderCar(ourGameState.myCars[i]);
     
-    
     glDisable( GL_DEPTH_TEST );
     
-    // Push all the commands to the GPU
     glFinish();
 }
