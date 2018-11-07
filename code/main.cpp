@@ -8,7 +8,7 @@
 
 #include "gfx_interface.h"
 
-//#define USE_DIRECTX
+#define USE_DIRECTX
 
 #ifdef USE_DIRECTX
 #include "directx.cpp"
@@ -16,36 +16,10 @@
 #include "opengl.cpp"
 #endif
 
-#define CORBET
+//#define CORBET
 #ifdef CORBET
 #include "corbet.cpp"
 #endif
-
-const char *vertexShaderSource = "#version 330 core\n"
-"layout (location = 0) in vec3 aPos;\n"
-"layout (location = 1) in vec3 aColor;\n"
-"layout (location = 2) in vec2 aTexCoord;\n"
-"out vec3 vertexColor;\n"
-"out vec2 texCoord;\n"
-"void main()\n"
-"{\n"
-"   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
-"   vertexColor = aColor;\n"
-"   texCoord = aTexCoord;\n"
-"}\0";
-
-const char *fragmentShaderSource = "#version 330 core\n"
-"out vec4 FragColor;\n"
-"in vec3 vertexColor;\n"
-"in vec2 texCoord;\n"
-"uniform sampler2D ourTexture1;\n"
-"uniform sampler2D ourTexture2;\n"
-"void main()\n"
-"{\n"
-"   FragColor = mix(texture(ourTexture1, texCoord), texture(ourTexture2, texCoord), 0.2);\n"
-//"   FragColor = texture(ourTexture2, texCoord);\n"
-//"   FragColor = vec4(vertexColor, 1.f); \n"
-"}\n\0";
 
 unsigned int LoadTexture(bool aUseAlpha, const char* aFilePath)
 {
@@ -174,21 +148,20 @@ int main(int argc, char** argv)
     const int windowWidth = 1280;
     const int windowHeight = 720;
     HWND windowHandle = Win32CreateWindow(windowTitle, windowWidth, windowHeight);
-    gfx_Init(windowHandle);
+    gfx_Init(windowHandle, windowWidth, windowHeight);
    
-    //stbi_set_flip_vertically_on_load(true); 
-    //unsigned int texture1 = LoadTexture(false, "container.jpg");
-    //unsigned int texture2  = LoadTexture(true, "awesomeface.png");
+    unsigned int texture1 = LoadTexture(false, "container.jpg");
+    //unsigned int texture1  = LoadTexture(true, "awesomeface.png");
     
-    //unsigned int shaderProgram = gfx_CreateShader(vertexShaderSource, fragmentShaderSource);
+    unsigned int shaderProgram = gfx_CreateHardcodedShader();
     
-    //gfx_Viewport(0, 0, windowWidth, windowHeight);
-    //gfx_ClearColor(0.8f, 0.2f, 0.f);
+    gfx_Viewport(0, 0, windowWidth, windowHeight);
+    gfx_ClearColor(0.8f, 0.2f, 0.f);
     
-    //gfx_BindShader(shaderProgram);
+    gfx_BindShader(shaderProgram);
 
-    //gfx_ShaderConstanti(shaderProgram, "ourTexture1", 0);
-    //gfx_ShaderConstanti(shaderProgram, "ourTexture2", 1);
+    gfx_ShaderConstanti(shaderProgram, "ourTexture1", 0);
+    gfx_ShaderConstanti(shaderProgram, "ourTexture2", 1);
     
     MSG msg = {};
     bool isRunning = true;
@@ -206,66 +179,16 @@ int main(int argc, char** argv)
             DispatchMessage(&msg);
         }
  
-        //gfx_Clear();
+        gfx_Clear();
         
-        //gfx_BindTexture(texture1, 0);
+        gfx_BindTexture(texture1, 0);
         //gfx_BindTexture(texture2, 1);
-        //gfx_DrawQuad();
+        gfx_DrawQuad();
     
-        //gfx_FinishFrame();
-      
-        glViewport(0, 0, windowWidth, windowHeight);
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);      
-        
-        
-        glMatrixMode(GL_PROJECTION);
-        glLoadIdentity();
-        gluPerspective(90.0, windowWidth/(double)windowHeight, 0.1, 100.0);
-        
-        
-        glMatrixMode(GL_MODELVIEW);
-        glLoadIdentity();
-        
-        // This sets the position and direction of the camera
-        // Place the camera at: 0, 0, 0
-        // Point the camera towards: 0, 0, 10 (so make it point forward)
-        // and we use Y as our up-axis
-        gluLookAt(0, 0, 0,
-                  0, 0, 10,
-                  0, 1, 0);
-        
-      
-        // Start the translations that are specific to the Quad
-        glPushMatrix();
-      
-        // Move it away from the camera
-        float distanceFromCamera = 2.f;
-        glTranslatef(0.f, 0.f, distanceFromCamera);
-        
-        // Rotate it away from the camera
-        glRotatef(30, 1, 0, 0);
-        
-        glBegin(GL_QUADS);
-        
-        glColor3f(1.0f, 0.0f,0.0f);
-        float size = 0.5f;
-        
-        glVertex3f(-size, -size, 0.f);
-        glVertex3f( size, -size, 0.f);
-        glVertex3f( size,  size, 0.f);
-        glVertex3f(-size,  size, 0.f);
-        
-        glEnd();
-        
-        // Stop the translations for the Quad
-        glPopMatrix();
-        
-        
-        // Push all the commands to the GPU
-        glFinish();
-        
+        gfx_FinishFrame();    
     }
+    
+    gfx_Shutdown();
     
     return 0;
 }

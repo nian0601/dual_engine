@@ -1,12 +1,37 @@
 #define GL_LITE_IMPLEMENTATION
 #include "gl_lite.h"
 
+
+const char *vertexShaderSource = "#version 330 core\n"
+"layout (location = 0) in vec3 aPos;\n"
+"layout (location = 1) in vec3 aColor;\n"
+"layout (location = 2) in vec2 aTexCoord;\n"
+"out vec3 vertexColor;\n"
+"out vec2 texCoord;\n"
+"void main()\n"
+"{\n"
+"   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
+"   vertexColor = aColor;\n"
+"   texCoord = aTexCoord;\n"
+"}\0";
+
+const char *fragmentShaderSource = "#version 330 core\n"
+"out vec4 FragColor;\n"
+"in vec3 vertexColor;\n"
+"in vec2 texCoord;\n"
+"uniform sampler2D ourTexture1;\n"
+"uniform sampler2D ourTexture2;\n"
+"void main()\n"
+"{\n"
+"   FragColor = mix(texture(ourTexture1, texCoord), texture(ourTexture2, texCoord), 0.2);\n"
+"}\n\0";
+
+
 struct opengl_renderobject
 {  
     unsigned int myVertexArrayObject;
     unsigned int myVertexBufferObject;
     unsigned int myElementBufferObject;
-    
 };
 
 struct opengl_context
@@ -27,10 +52,10 @@ void openglCreateQuad()
     float size = 0.5f;
     float vertices[] = {
         // position         // colors            //UVs
-         size,  size, 0.f,   1.f,  0.f,  0.f,    1.f, 1.0f,  // topright
-         size, -size, 0.f,   0.f,  1.f,  0.f,    1.f, 0.f,   // bottomright
-        -size, -size, 0.f,   0.f,  0.f,  1.f,    0.f, 0.f,   // bottomleft
-        -size,  size, 0.f,   0.2f, 0.2f, 0.2f,   0.f, 1.f     // topleft
+         size,  size, 0.f,   1.f,  0.f,  0.f,    1.f, 0.0f,  // topright
+         size, -size, 0.f,   0.f,  1.f,  0.f,    1.f, 1.f,   // bottomright
+        -size, -size, 0.f,   0.f,  0.f,  1.f,    0.f, 1.f,   // bottomleft
+        -size,  size, 0.f,   0.2f, 0.2f, 0.2f,   0.f, 0.f     // topleft
     };
     
     unsigned int indices[] = {
@@ -91,7 +116,7 @@ void openglVerifyShaderProgram(unsigned int aShaderProgramID)
 
 
 // gfx_interface-implementation
-void gfx_Init(HWND aWindowHandle)
+void gfx_Init(HWND aWindowHandle, int aWindowHeight, int aWindowWidth)
 {
     HDC windowDC = GetDC(aWindowHandle);
     PIXELFORMATDESCRIPTOR desiredPixelFormat = {};
@@ -119,6 +144,9 @@ void gfx_Init(HWND aWindowHandle)
     openglCreateQuad();
 }
 
+void gfx_Shutdown()
+{
+}
 
 void gfx_Viewport(int aX, int aY, int aWidth, int aHeight)
 {
@@ -156,6 +184,11 @@ unsigned int gfx_CreateShader(const char* aVertexShaderData, const char* aFragme
     glDeleteShader(fragmentShader);
     
     return shaderProgram;
+}
+
+unsigned int gfx_CreateHardcodedShader()
+{
+    return gfx_CreateShader(vertexShaderSource, fragmentShaderSource);
 }
 
 void gfx_BindShader(unsigned int aShaderID)
