@@ -8,18 +8,35 @@
 
 #include "gfx_interface.h"
 
-#define USE_DIRECTX
+struct Vector3f
+{
+    float x;
+    float y;
+    float z;
+};
 
+struct Vector2f
+{
+    float x;
+    float y;
+};
+
+#define USE_DIRECTX
+#define CORBET
+
+#ifdef CORBET
+#include "corbet.cpp"
+#include "opengl.cpp"
+#else
 #ifdef USE_DIRECTX
 #include "directx.cpp"
 #else
 #include "opengl.cpp"
 #endif
-
-//#define CORBET
-#ifdef CORBET
-#include "corbet.cpp"
 #endif
+
+
+
 
 unsigned int LoadTexture(bool aUseAlpha, const char* aFilePath)
 {
@@ -114,13 +131,12 @@ int main(int argc, char** argv)
     const int windowWidth = 1280;
     const int windowHeight = 720;
     HWND windowHandle = Win32CreateWindow(windowTitle, windowWidth, windowHeight);
-    gfx_Init(windowHandle);
     
     MSG msg = {};
     bool isRunning = true;
     
+    corbetInit(windowHandle);
     corbetSetWindowSize(windowWidth, windowHeight);
-    corbetInit();
     
     while(isRunning)
     {

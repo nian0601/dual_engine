@@ -34,19 +34,6 @@ const char *pixelShaderSource = "\n"
 #include <d3d11.h>
 #include <D3DCompiler.h>
 
-struct Vector3f
-{
-    float x;
-    float y;
-    float z;
-};
-
-struct Vector2f
-{
-    float x;
-    float y;
-};
-
 struct Vertex
 {
     Vector3f pos;

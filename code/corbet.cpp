@@ -1,12 +1,5 @@
 #include <gl/glu.h>
 
-struct Vector3f
-{
-    float x;
-    float y;
-    float z;
-};
-
 struct Car
 {
     Vector3f myPosition;
@@ -21,6 +14,8 @@ struct GameState
     int myNumberOfRoadLanes;
     float myRoadLaneWidth;
     float myRoadLenght;
+    
+    Vector3f myCameraPosition;
 };
 
 GameState ourGameState;
@@ -156,11 +151,46 @@ void createCar(const Vector3f& aPosition, float aSpeed)
     ourGameState.myNumberOfCars++;
 }
 
-void corbetInit()
+void setupOpenGL(HWND aWindowHandle)
 {
+    HDC windowDC = GetDC(aWindowHandle);	
+    PIXELFORMATDESCRIPTOR desiredPixelFormat = {};	
+    desiredPixelFormat.nSize = sizeof(desiredPixelFormat);	
+    desiredPixelFormat.nVersion = 1;	
+    desiredPixelFormat.iPixelType = PFD_TYPE_RGBA;	
+    desiredPixelFormat.dwFlags = PFD_SUPPORT_OPENGL|PFD_DRAW_TO_WINDOW;	
+    desiredPixelFormat.cColorBits = 32;	
+    desiredPixelFormat.cAlphaBits = 8;	
+    desiredPixelFormat.iLayerType = PFD_MAIN_PLANE;	
+    	
+    int suggestedPixelFormatIndex = ChoosePixelFormat(windowDC, &desiredPixelFormat);	
+    	
+    PIXELFORMATDESCRIPTOR suggestedPixelFormat;	
+    DescribePixelFormat(windowDC, suggestedPixelFormatIndex, sizeof(suggestedPixelFormat), &suggestedPixelFormat);	
+    SetPixelFormat(windowDC, suggestedPixelFormatIndex, &suggestedPixelFormat);	
+    	    
+    HGLRC openGLRC = wglCreateContext(windowDC);	    
+    if(wglMakeCurrent(windowDC, openGLRC))
+    {	
+        // Yay, we got a OpenGL-context!	
+    }	
+    else	
+    {	
+        ASSERT(false);	
+    }
+}
+
+void corbetInit(HWND aWindowHandle)
+{
+    setupOpenGL(aWindowHandle);
     ourGameState.myNumberOfRoadLanes = 5;
     ourGameState.myRoadLaneWidth = 3.f;
     ourGameState.myRoadLenght = 100.f;
+    
+    ourGameState.myCameraPosition.x = 0.f;
+    ourGameState.myCameraPosition.y = 6.f;
+    ourGameState.myCameraPosition.z = -4.f;
+    
     
     const float roadWidth = ourGameState.myNumberOfRoadLanes * ourGameState.myRoadLaneWidth;
     
@@ -211,18 +241,22 @@ void corbetUpdate()
         Car& car = ourGameState.myCars[i];
         car.myPosition.z -= car.mySpeed * deltaTime;
     }
+    
+    ourGameState.myCameraPosition.z += 1.f * deltaTime;
 }
 
 void corbetRender()
 {
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClearColor(0.0f, 0.1f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);      
     
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     
-    gluLookAt(0.f, 6.f, -4.f,
-              0.f, 0.f, 10.f,
+    const Vector3f& pos = ourGameState.myCameraPosition;
+    
+    gluLookAt(pos.x, pos.y, pos.z,
+              0.f, 0.f, pos.z + 14.f,
               0.f, 1.f, 0.f);
     
    
