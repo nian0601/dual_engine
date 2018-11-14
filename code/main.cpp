@@ -22,7 +22,7 @@ struct Vector2f
 };
 
 #define USE_DIRECTX
-#define CORBET
+//#define CORBET
 
 #ifdef CORBET
 #include "corbet.cpp"
@@ -41,7 +41,7 @@ struct Vector2f
 unsigned int LoadTexture(bool aUseAlpha, const char* aFilePath)
 {
     int width, height, nrChannels;
-    unsigned char* data = stbi_load(aFilePath, &width, &height, &nrChannels, 0);
+    unsigned char* data = stbi_load(aFilePath, &width, &height, &nrChannels, 4);
     ASSERT(data != NULL);
     
     unsigned int texture = gfx_CreateTexture(width, height, aUseAlpha, data);

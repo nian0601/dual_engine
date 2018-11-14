@@ -24,6 +24,7 @@ const char *fragmentShaderSource = "#version 330 core\n"
 "void main()\n"
 "{\n"
 "   FragColor = mix(texture(ourTexture1, texCoord), texture(ourTexture2, texCoord), 0.2);\n"
+"   FragColor = texture(ourTexture1, texCoord);\n"
 "}\n\0";
 
 
@@ -211,11 +212,8 @@ unsigned int gfx_CreateTexture(int aWidth, int aHeight, bool aUseAlpha, void* so
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    
-    if(aUseAlpha)
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, aWidth, aHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, someTextureData);
-    else
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, aWidth, aHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, someTextureData);
+ 
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, aWidth, aHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, someTextureData);
     
     return texture;
 }

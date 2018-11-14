@@ -378,33 +378,12 @@ void gfx_ShaderConstanti(unsigned int aShaderID, const char* aConstantName, int 
 
 unsigned int gfx_CreateTexture(int aWidth, int aHeight, bool aUseAlpha, void* someTextureData)
 {
-    //HRESULT result = DirectX::CreateWICTextureFromMemory(
-    //    ourDirectXContext.myDevice,
-    //    ourDirectXContext.myContext,
-    //    (uint8_t*)someTextureData,
-    //    sizeof(unsigned char) * aWidth * aHeight,
-    //    &ourDirectXContext.myTexture.myResource,
-    //   &ourDirectXContext.myTexture.myShaderResource);
-    
     D3D11_TEXTURE2D_DESC textureDesc = {};
     textureDesc.Width = aWidth;
     textureDesc.Height = aHeight;
     textureDesc.MipLevels = 1;
     textureDesc.ArraySize = 1;
-    
-    int numComponents;
-    if(aUseAlpha)
-    {
-        textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        numComponents = 4;
-    }
-    else
-    {
-        textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        numComponents = 3;
-    }
-     
-    
+    textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
     textureDesc.SampleDesc.Count = 1;
     textureDesc.SampleDesc.Quality = 0;
     textureDesc.Usage = D3D11_USAGE_IMMUTABLE;
@@ -414,7 +393,7 @@ unsigned int gfx_CreateTexture(int aWidth, int aHeight, bool aUseAlpha, void* so
     
     D3D11_SUBRESOURCE_DATA textureData = {};
     textureData.pSysMem = someTextureData;
-    textureData.SysMemPitch = sizeof(unsigned char) * numComponents  * aWidth;
+    textureData.SysMemPitch = sizeof(unsigned char) * 4  * aWidth;
     textureData.SysMemSlicePitch = 0;
     
     HRESULT result = ourDirectXContext.myDevice->CreateTexture2D(
