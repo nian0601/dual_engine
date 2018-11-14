@@ -3,7 +3,7 @@ void gfx_Shutdown();
 void gfx_Viewport(int aX, int aY, int aWidth, int aHeight);
 void gfx_ClearColor(float aR, float aG, float aB);
 
-unsigned int gfx_CreateShader(const char* aVertexShaderData, const char* aFragmentShaderData);
+unsigned int gfx_CreateShader(const char* aVertexName, const char* aPixelName);
 unsigned int gfx_CreateHardcodedShader();
 void gfx_BindShader(unsigned int aShaderID);
 void gfx_ShaderConstanti(unsigned int aShaderID, const char* aConstantName, int aValue);

@@ -1,33 +1,6 @@
 #define GL_LITE_IMPLEMENTATION
 #include "gl_lite.h"
 
-
-const char *vertexShaderSource = "#version 330 core\n"
-"layout (location = 0) in vec3 aPos;\n"
-"layout (location = 1) in vec3 aColor;\n"
-"layout (location = 2) in vec2 aTexCoord;\n"
-"out vec3 vertexColor;\n"
-"out vec2 texCoord;\n"
-"void main()\n"
-"{\n"
-"   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
-"   vertexColor = aColor;\n"
-"   texCoord = aTexCoord;\n"
-"}\0";
-
-const char *fragmentShaderSource = "#version 330 core\n"
-"out vec4 FragColor;\n"
-"in vec3 vertexColor;\n"
-"in vec2 texCoord;\n"
-"uniform sampler2D ourTexture1;\n"
-"uniform sampler2D ourTexture2;\n"
-"void main()\n"
-"{\n"
-"   FragColor = mix(texture(ourTexture1, texCoord), texture(ourTexture2, texCoord), 0.2);\n"
-"   FragColor = texture(ourTexture1, texCoord);\n"
-"}\n\0";
-
-
 struct opengl_renderobject
 {  
     unsigned int myVertexArrayObject;
@@ -159,19 +132,27 @@ void gfx_ClearColor(float aR, float aG, float aB)
     glClearColor(aR, aG, aB, 1.f);
 }
 
-unsigned int gfx_CreateShader(const char* aVertexShaderData, const char* aFragmentShaderData)
+unsigned int gfx_CreateShader(const char* aVertexName, const char* aPixelName)
 {
+    char fullPath[100];
+    
     // Compile our VertexShader
+    snprintf(fullPath, 100, "data/shaders/opengl/%s", aVertexName);
+    const char* vertexData = DE_ReadEntireFile(fullPath);
     unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertexShader, 1, &aVertexShaderData, NULL);
+    glShaderSource(vertexShader, 1, &vertexData, NULL);
     glCompileShader(vertexShader);
     openglVerifyShader(vertexShader);
+    free((void*)vertexData);
     
     // Compile our FragmentShader
+    snprintf(fullPath, 100, "data/shaders/opengl/%s", aPixelName);
+    const char* pixelData = DE_ReadEntireFile(fullPath);
     unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragmentShader, 1, &aFragmentShaderData, NULL);
+    glShaderSource(fragmentShader, 1, &pixelData, NULL);
     glCompileShader(fragmentShader);
     openglVerifyShader(fragmentShader);
+    free((void*)pixelData);
     
     // Link our Vertex and Fragment Shaders
     unsigned int shaderProgram = glCreateProgram();
@@ -189,7 +170,7 @@ unsigned int gfx_CreateShader(const char* aVertexShaderData, const char* aFragme
 
 unsigned int gfx_CreateHardcodedShader()
 {
-    return gfx_CreateShader(vertexShaderSource, fragmentShaderSource);
+    return gfx_CreateShader("quad.vx", "quad.px");
 }
 
 void gfx_BindShader(unsigned int aShaderID)

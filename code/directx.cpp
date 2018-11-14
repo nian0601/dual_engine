@@ -1,35 +1,6 @@
-
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "d3dcompiler.lib")
-
-const char *vertexShaderSource = "\n"
-"struct VS_OUTPUT\n"
-"{\n"
-"    float4 Pos : SV_POSITION;\n"
-"    float2 Tex : TEXCOORD;\n"
-"};\n"
-"VS_OUTPUT VS(float4 inPos : POSITION, float2 inTex : TEXCOORD)\n"
-"{\n"
-"    VS_OUTPUT output;\n"
-"    output.Pos = inPos;\n"
-"    output.Tex = inTex;\n"
-"    return output;\n"
-"}";
-
-const char *pixelShaderSource = "\n"
-"SamplerState LinearSampler : register(s0);\n"
-"Texture2D AlbedoTexture : register(t0);\n"
-"struct VS_OUTPUT\n"
-"{\n"
-"    float4 Pos : POSITION;\n"
-"    float2 Tex : TEXCOORD;\n"
-"};\n"
-"float4 PS(VS_OUTPUT input) : SV_TARGET\n"
-"{\n"
-"   return AlbedoTexture.Sample(LinearSampler, input.Tex);\n"
-"   //return float4(0.f, 1.f, 0.f, 1.f);\n"
-"}";
 
 #include <d3d11.h>
 #include <D3DCompiler.h>
@@ -271,47 +242,24 @@ void gfx_ClearColor(float aR, float aG, float aB)
     ourDirectXContext.myClearColor[3] = 1;
 }
 
-
-unsigned int gfx_CreateShader(const char* aVertexShaderData, const char* aPixelShaderData)
+void CompileShader(const char* someShaderData, const char* anEntryPoint, const char* aVersion, ID3D10Blob*& aBufferOut)
 {
-    dirextx_quadShader& shader = ourDirectXContext.myQuadShader;
-    
     ID3DBlob* errorBlob = NULL;
-    
+   
     HRESULT result = D3DCompile(
-        aVertexShaderData,
-        strlen(aVertexShaderData) * sizeof(char),
+        someShaderData,
+        strlen(someShaderData) * sizeof(char),
         NULL,
         NULL,
         NULL,
-        "VS",
-        "vs_5_0",
+        anEntryPoint,
+        aVersion,
         0,
         0,
-        &shader.myVertexShaderBuffer,
+        &aBufferOut,
         &errorBlob);
     
-    if(result != S_OK)
-    {
-        const char* errorMsg = NULL;
-        if(errorBlob)
-            errorMsg = (const char*)errorBlob->GetBufferPointer();
-        
-        ASSERT(false);
-    }
-    
-    result = D3DCompile(
-        aPixelShaderData,
-        strlen(aPixelShaderData) * sizeof(char),
-        NULL,
-        NULL,
-        NULL,
-        "PS",
-        "ps_5_0",
-        0,
-        0,
-        &shader.myPixelShaderBuffer,
-        &errorBlob);
+    free((void*)someShaderData);
     if(result != S_OK)
     {
         const char* errorMsg = NULL;
@@ -323,8 +271,23 @@ unsigned int gfx_CreateShader(const char* aVertexShaderData, const char* aPixelS
     
     if(errorBlob)
         errorBlob->Release();
+}
+
+unsigned int gfx_CreateShader(const char* aVertexName, const char* aPixelName)
+{
+    char fullPath[100];
+    int numChars = snprintf(fullPath, 100, "data/shaders/directx/%s", aVertexName);
+    const char* vertexData = DE_ReadEntireFile(fullPath);
     
-    result = ourDirectXContext.myDevice->CreateVertexShader(
+    numChars = snprintf(fullPath, 100, "data/shaders/directx/%s", aPixelName);
+    const char* pixelData = DE_ReadEntireFile(fullPath);
+    
+    dirextx_quadShader& shader = ourDirectXContext.myQuadShader;
+    
+    CompileShader(vertexData, "VS", "vs_5_0", shader.myVertexShaderBuffer);
+    CompileShader(pixelData, "PS", "ps_5_0", shader.myPixelShaderBuffer);
+
+    HRESULT result = ourDirectXContext.myDevice->CreateVertexShader(
         shader.myVertexShaderBuffer->GetBufferPointer(),
         shader.myVertexShaderBuffer->GetBufferSize(),
         NULL,
@@ -337,7 +300,6 @@ unsigned int gfx_CreateShader(const char* aVertexShaderData, const char* aPixelS
         NULL,
         &shader.myPixelShader);
     ASSERT(result == S_OK);
-    
     
     
     D3D11_INPUT_ELEMENT_DESC layout[] =
@@ -360,7 +322,7 @@ unsigned int gfx_CreateShader(const char* aVertexShaderData, const char* aPixelS
 
 unsigned int gfx_CreateHardcodedShader()
 {
-    return gfx_CreateShader(vertexShaderSource, pixelShaderSource);
+    return gfx_CreateShader("quad.vx", "quad.px");
 }
 
 void gfx_BindShader(unsigned int aShaderID)

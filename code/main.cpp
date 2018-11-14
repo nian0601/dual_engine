@@ -7,6 +7,7 @@
 #include "stb_image.h"
 
 #include "gfx_interface.h"
+#include "common_utils.cpp"
 
 struct Vector3f
 {
@@ -21,7 +22,7 @@ struct Vector2f
     float y;
 };
 
-#define USE_DIRECTX
+//#define USE_DIRECTX
 //#define CORBET
 
 #ifdef CORBET
@@ -166,8 +167,8 @@ int main(int argc, char** argv)
     HWND windowHandle = Win32CreateWindow(windowTitle, windowWidth, windowHeight);
     gfx_Init(windowHandle, windowWidth, windowHeight);
    
-    unsigned int texture1 = LoadTexture(false, "container.jpg");
-    //unsigned int texture1  = LoadTexture(true, "awesomeface.png");
+    //unsigned int texture1 = LoadTexture(false, "container.jpg");
+    unsigned int texture1  = LoadTexture(true, "awesomeface.png");
     
     unsigned int shaderProgram = gfx_CreateHardcodedShader();
     
