@@ -8,19 +8,7 @@
 
 #include "gfx_interface.h"
 #include "common_utils.cpp"
-
-struct Vector3f
-{
-    float x;
-    float y;
-    float z;
-};
-
-struct Vector2f
-{
-    float x;
-    float y;
-};
+#include "DE_Math.h"
 
 //#define USE_DIRECTX
 //#define CORBET
