@@ -6,22 +6,16 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
+#include "DE_Math.h"
 #include "gfx_interface.h"
 #include "common_utils.cpp"
-#include "DE_Math.h"
 
-//#define USE_DIRECTX
-//#define CORBET
+#define USE_DIRECTX
 
-#ifdef CORBET
-#include "corbet.cpp"
-#include "opengl.cpp"
-#else
 #ifdef USE_DIRECTX
 #include "directx.cpp"
 #else
 #include "opengl.cpp"
-#endif
 #endif
 
 
@@ -112,40 +106,6 @@ HWND Win32CreateWindow(const char* aTitle, int aWindowWidth, int aWindowHeight)
     return windowHandle;
 }
 
-#ifdef CORBET
-int main(int argc, char** argv)
-{
-    const char* windowTitle = "Dual Engine";
-    
-    const int windowWidth = 1280;
-    const int windowHeight = 720;
-    HWND windowHandle = Win32CreateWindow(windowTitle, windowWidth, windowHeight);
-    
-    MSG msg = {};
-    bool isRunning = true;
-    
-    corbetInit(windowHandle);
-    corbetSetWindowSize(windowWidth, windowHeight);
-    
-    while(isRunning)
-    {
-        if(PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
-        {
-            UINT msgCode = msg.message;
-            if(msgCode == WM_QUIT || msgCode == WM_DESTROY)
-                isRunning = false;
-            
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-        }
-        
-        corbetUpdate();
-        corbetRender();
-    }
-    
-    return 0;
-}
-#else
 int main(int argc, char** argv)
 {
     const char* windowTitle = "Dual Engine";
@@ -171,6 +131,13 @@ int main(int argc, char** argv)
     MSG msg = {};
     bool isRunning = true;
     
+    const float pi = 3.14159265f;
+    Matrix projection = ProjectionMatrix(0.1f, 100.f, float(windowHeight) / windowWidth, pi * 0.5f);
+    Matrix view = IdentityMatrix(); 
+    Matrix transform = IdentityMatrix(); 
+ 
+    transform *= RotationMatrixY(pi * 0.75f);
+    Translate(transform, {0.f, 0.f, 3.f});
     
     while(isRunning)
     {
@@ -186,9 +153,21 @@ int main(int argc, char** argv)
  
         gfx_Clear();
         
+        #if 1
+        
+        gfx_SetProjection(projection);
+        gfx_SetView(view);
+        gfx_CommitConstantData();
+        gfx_DrawCube(transform);        
+        
+        #else
+        
         gfx_BindTexture(texture1, 0);
         //gfx_BindTexture(texture2, 1);
-        gfx_DrawQuad();
+        gfx_DrawQuad();        
+        
+        #endif
+
     
         gfx_FinishFrame();    
     }
@@ -197,4 +176,3 @@ int main(int argc, char** argv)
     
     return 0;
 }
-#endif

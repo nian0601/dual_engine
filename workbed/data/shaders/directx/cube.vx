@@ -1,0 +1,47 @@
+cbuffer GlobalData
+{
+	Matrix View;
+	Matrix Projection;
+};
+
+cbuffer ObjectData
+{
+	Matrix World;	
+	//float4 ColorAndMetalness;
+	//float4 ScaleAndRoughness;
+};
+
+struct PosNormColorVertex
+{
+	float4 Position : POSITION;
+	float4 Normal : NORMAL;
+};
+
+struct PosNormColorPixel
+{
+	float4 Position : SV_POSITION;
+	float4 NormalAndRoughness : NORMAL;
+	float4 ColorAndMetalness : COLOR;
+};
+
+PosNormColorPixel VS(PosNormColorVertex aInput)
+{
+	PosNormColorPixel output;
+
+	aInput.Position.w = 1.f;
+	output.Position = mul(World, aInput.Position);
+	output.Position = mul(View, output.Position);
+	output.Position = mul(Projection, output.Position);
+
+	//aInput.Position.w = 1.f;
+	//aInput.Position.xyz *= ScaleAndRoughness.xyz;
+	//output.Position = mul(World, aInput.Position);
+	//output.Position = mul(View, output.Position);
+	//output.Position = mul(Projection, output.Position);
+
+
+	output.NormalAndRoughness.xyz = aInput.Normal.xyz;
+	//output.NormalAndRoughness.w = ScaleAndRoughness.w;
+	//output.ColorAndMetalness = ColorAndMetalness;
+	return output;
+};

@@ -1,4 +1,156 @@
 
+// Vector4
+
+struct Vector4f
+{
+    float x;
+    float y;
+    float z;
+    float w;
+};
+
+bool operator==(const Vector4f& aA, const Vector4f& aB)
+{
+    return aA.x == aB.x && aA.y == aB.y && aA.z == aB.z && aA.w == aB.w;
+}
+
+bool operator!=(const Vector4f& aA, const Vector4f& aB)
+{
+    return !(aA == aB);
+}
+
+// Addition
+Vector4f operator+=(Vector4f& aA, float aScalar)
+{
+    aA.x += aScalar;
+    aA.y += aScalar;
+    aA.z += aScalar;
+    aA.w += aScalar;
+    return aA;
+}
+
+Vector4f operator+(const Vector4f& aA, float aScalar)
+{
+    Vector4f result = aA;
+    result += aScalar;
+    return result;
+}
+
+Vector4f operator+=(Vector4f& aA, const Vector4f& aB)
+{
+    aA.x += aB.x;
+    aA.y += aB.y;
+    aA.z += aB.z;
+    aA.w += aB.w;
+    return aA;
+}
+
+Vector4f operator+(const Vector4f& aA, const Vector4f& aB)
+{
+    Vector4f result = aA;
+    result += aB;
+    return result;
+}
+
+// Subtraction
+Vector4f operator-=(Vector4f& aA, float aScalar)
+{
+    aA.x -= aScalar;
+    aA.y -= aScalar;
+    aA.z -= aScalar;
+    aA.w -= aScalar;
+    return aA;
+}
+
+Vector4f operator-(const Vector4f& aA, float aScalar)
+{
+    Vector4f result = aA;
+    result -= aScalar;
+    return result;
+}
+
+Vector4f operator-=(Vector4f& aA, const Vector4f& aB)
+{
+    aA.x -= aB.x;
+    aA.y -= aB.y;
+    aA.z -= aB.z;
+    aA.w -= aB.w;
+    return aA;
+}
+
+Vector4f operator-(const Vector4f& aA, const Vector4f& aB)
+{
+    Vector4f result = aA;
+    result -= aB;
+    return result;
+}
+
+// Multiplication
+Vector4f operator*=(Vector4f& aA, float aScalar)
+{
+    aA.x *= aScalar;
+    aA.y *= aScalar;
+    aA.z *= aScalar;
+    aA.w *= aScalar;
+    return aA;
+}
+
+Vector4f operator*(const Vector4f& aA, float aScalar)
+{
+    Vector4f result = aA;
+    result *= aScalar;
+    return result;
+}
+
+Vector4f operator*=(Vector4f& aA, const Vector4f& aB)
+{
+    aA.x *= aB.x;
+    aA.y *= aB.y;
+    aA.z *= aB.z;
+    aA.w *= aB.w;
+    return aA;
+}
+
+Vector4f operator*(const Vector4f& aA, const Vector4f& aB)
+{
+    Vector4f result = aA;
+    result *= aB;
+    return result;
+}
+
+// Division
+Vector4f operator/=(Vector4f& aA, float aScalar)
+{
+    aA.x /= aScalar;
+    aA.y /= aScalar;
+    aA.z /= aScalar;
+    aA.w /= aScalar;
+    return aA;
+}
+
+Vector4f operator/(const Vector4f& aA, float aScalar)
+{
+    Vector4f result = aA;
+    result /= aScalar;
+    return result;
+}
+
+Vector4f operator/=(Vector4f& aA, const Vector4f& aB)
+{
+    aA.x /= aB.x;
+    aA.y /= aB.y;
+    aA.z /= aB.z;
+    aA.w /= aB.w;
+    return aA;
+}
+
+Vector4f operator/(const Vector4f& aA, const Vector4f& aB)
+{
+    Vector4f result = aA;
+    result /= aB;
+    return result;
+}
+
 // Vector3
 
 struct Vector3f

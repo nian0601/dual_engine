@@ -1,0 +1,43 @@
+struct PosNormColorPixel
+{
+	float4 Position : SV_POSITION;
+	float4 NormalAndRoughness : NORMAL;
+	float4 ColorAndMetalness : COLOR;
+};
+
+struct GBuffer
+{
+	float4 AlbedoMetalness;
+	float4 NormalRoughness;
+	float Depth;
+};
+
+float4 PS(PosNormColorPixel anInput) : SV_TARGET
+{
+	return float4(abs(anInput.NormalAndRoughness.xyz), 1.0);
+}
+
+/*
+GBuffer PX(PosNormColorPixel anInput) : SV_TARGET
+{
+	//For testing only!
+	//float metalness = 0.95;
+	//float roughness = 0.15;
+
+	float metalness = anInput.ColorAndMetalness.w;
+	float roughness = anInput.NormalAndRoughness.w;
+
+	GBuffer output;
+	output.AlbedoMetalness = anInput.ColorAndMetalness;
+	output.NormalRoughness.xyz = normalize(anInput.NormalAndRoughness).xyz;
+
+	output.NormalRoughness.xyz += 1.f;
+	output.NormalRoughness.xyz *= 0.5f;
+	
+	output.AlbedoMetalness.w = metalness;
+	output.NormalRoughness.w = roughness;
+
+	output.Depth = anInput.Position.z;
+	return output;
+};
+*/

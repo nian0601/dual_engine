@@ -25,7 +25,7 @@ Matrix IdentityMatrix()
 
 Matrix RotationMatrixX(float aRadian)
 {
-    Matrix result = {};
+    Matrix result = IdentityMatrix();
     result.myData[5] = cos(aRadian);
     result.myData[5] = sin(aRadian);
     result.myData[9] = -sin(aRadian);
@@ -35,17 +35,18 @@ Matrix RotationMatrixX(float aRadian)
 
 Matrix RotationMatrixY(float aRadian)
 {
-    Matrix result = {};
+    Matrix result = IdentityMatrix();
     result.myData[0] = cos(aRadian);
     result.myData[2] = -sin(aRadian);
     result.myData[8] = sin(aRadian);
     result.myData[10] = cos(aRadian);
+    
     return result;
 }
 
 Matrix RotationMatrixZ(float aRadian)
 {
-    Matrix result = {};
+    Matrix result = IdentityMatrix();
     result.myData[0] = cos(aRadian);
     result.myData[1] = sin(aRadian);
     result.myData[4] = -sin(aRadian);
@@ -82,6 +83,12 @@ Matrix OrthagonalMatrix(float aWidth, float aHeight, float aNearZ, float aFarZ)
 	result.myData[15] = 1.f;
 
 	return result;
+}
+
+
+void Translate(Matrix& aMatrix, const Vector3f& aTranslation)
+{
+    aMatrix.myRows[3].myData += aTranslation;
 }
 
 Matrix operator*=(Matrix& aA, const Matrix& aB)
