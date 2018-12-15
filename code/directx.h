@@ -16,6 +16,12 @@ struct DX_3dConstants
     Matrix myProjection;
 };
 
+struct DX_modelConstants
+{
+    Matrix myWorld;
+    Vector4f myColor;
+};
+
 struct DX_shader
 {
     ID3D11VertexShader* myVertexShader;
@@ -58,14 +64,16 @@ struct DX_context
     
     DX_shader myQuadShader;
     DX_renderobject myQuad;
-    DX_texture myTexture;
+    
+    DX_texture myTextures[16];
+    unsigned int myNextTextureID;
     
     
     DX_shader myCubeShader;
     DX_renderobject myCube;
     DX_constantBuffer myConstantBuffer;
     DX_3dConstants my3DConstants;
-    
+    DX_modelConstants myModelConstants;
     
     ID3D11SamplerState* mySamplerState;
     ID3D11RasterizerState* myRasterizerState;

@@ -14,7 +14,7 @@ struct GBuffer
 
 float4 PS(PosNormColorPixel anInput) : SV_TARGET
 {
-	return float4(abs(anInput.NormalAndRoughness.xyz), 1.0);
+	return float4(abs(anInput.ColorAndMetalness.xyz), 1.0);
 }
 
 /*

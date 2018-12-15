@@ -9,6 +9,108 @@
 
 static DX_context ourDirectXContext;
 
+
+void DX_CompileShader(const char* someShaderData, const char* anEntryPoint, const char* aVersion, ID3D10Blob*& aBufferOut)
+{
+    ID3DBlob* errorBlob = NULL;
+   
+    HRESULT result = D3DCompile(
+        someShaderData,
+        strlen(someShaderData) * sizeof(char),
+        NULL,
+        NULL,
+        NULL,
+        anEntryPoint,
+        aVersion,
+        0,
+        0,
+        &aBufferOut,
+        &errorBlob);
+    
+    free((void*)someShaderData);
+    if(result != S_OK)
+    {
+        const char* errorMsg = NULL;
+        if(errorBlob)
+            errorMsg = (const char*)errorBlob->GetBufferPointer();
+        
+        ASSERT(false);
+    }
+    
+    if(errorBlob)
+        errorBlob->Release();
+}
+
+void DX_CreateShader(DX_shader& aShader, bool aSprite, const char* aVertexName, const char* aPixelName)
+{
+    char fullPath[100];
+    int numChars = snprintf(fullPath, 100, "data/shaders/directx/%s", aVertexName);
+    const char* vertexData = DE_ReadEntireFile(fullPath);
+    
+    numChars = snprintf(fullPath, 100, "data/shaders/directx/%s", aPixelName);
+    const char* pixelData = DE_ReadEntireFile(fullPath);
+    
+    DX_CompileShader(vertexData, "VS", "vs_5_0", aShader.myVertexShaderBuffer);
+    DX_CompileShader(pixelData, "PS", "ps_5_0", aShader.myPixelShaderBuffer);
+
+    HRESULT result = ourDirectXContext.myDevice->CreateVertexShader(
+        aShader.myVertexShaderBuffer->GetBufferPointer(),
+        aShader.myVertexShaderBuffer->GetBufferSize(),
+        NULL,
+        &aShader.myVertexShader);
+    ASSERT(result == S_OK);
+    
+    result = ourDirectXContext.myDevice->CreatePixelShader(
+        aShader.myPixelShaderBuffer->GetBufferPointer(),
+        aShader.myPixelShaderBuffer->GetBufferSize(),
+        NULL,
+        &aShader.myPixelShader);
+    ASSERT(result == S_OK);
+    
+    
+    if(aSprite)
+    {
+        D3D11_INPUT_ELEMENT_DESC layout[] =
+        {
+            { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+            { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        };
+        UINT numElements = ARRAYSIZE(layout);
+    
+        result = ourDirectXContext.myDevice->CreateInputLayout(
+            layout,
+            numElements,
+            aShader.myVertexShaderBuffer->GetBufferPointer(),
+            aShader.myVertexShaderBuffer->GetBufferSize(),
+            &aShader.myInputLayout);
+    }
+    else 
+    {
+        D3D11_INPUT_ELEMENT_DESC layout[] =
+        {
+            { "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+            { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 16, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        };
+        UINT numElements = ARRAYSIZE(layout);
+        
+        result = ourDirectXContext.myDevice->CreateInputLayout(
+            layout,
+            numElements,
+            aShader.myVertexShaderBuffer->GetBufferPointer(),
+            aShader.myVertexShaderBuffer->GetBufferSize(),
+            &aShader.myInputLayout);
+    }
+}
+
+void DX_ReleaseShader(DX_shader& aShader)
+{
+    aShader.myVertexShader->Release();
+    aShader.myPixelShader->Release();
+    aShader.myVertexShaderBuffer->Release();
+    aShader.myPixelShaderBuffer->Release();
+    aShader.myInputLayout->Release();
+}
+
 void DX_CreateConstantBuffer(DX_constantBuffer& aBuffer)
 {
     D3D11_BUFFER_DESC bufferDesc = {};
@@ -24,6 +126,12 @@ void DX_CreateConstantBuffer(DX_constantBuffer& aBuffer)
         NULL,
         &aBuffer.myBuffer);
     ASSERT(result == S_OK);
+}
+
+void DX_ReleaseRenderObject(DX_renderobject& anObject)
+{
+    anObject.myVertexBuffer->Release();
+    anObject.myIndexBuffer->Release();
 }
 
 void DX_CreateQuad()
@@ -222,7 +330,7 @@ void DX_CreateCube()
         &cube.myIndexBuffer);
     ASSERT(result == S_OK);
     
-    cube.myConstantBuffer.myBufferSize = sizeof(Matrix);
+    cube.myConstantBuffer.myBufferSize = sizeof(ourDirectXContext.myModelConstants);
     cube.myConstantBuffer.myBufferIndex = 1;
     DX_CreateConstantBuffer(cube.myConstantBuffer);
 }
@@ -382,6 +490,8 @@ void DX_CreateDepthBuffer(int aWidth, int aHeight)
  
 void gfx_Init(HWND aWindowHandle, int aWindowWidth, int aWindowHeight)
 {
+    ourDirectXContext.myNextTextureID = 0;
+    
     DX_CreateSwapChain(aWindowHandle, aWindowWidth, aWindowHeight);
     DX_CreateBackbuffer();
     DX_CreateDepthBuffer(aWindowWidth, aWindowHeight);
@@ -396,10 +506,12 @@ void gfx_Init(HWND aWindowHandle, int aWindowWidth, int aWindowHeight)
     DX_CreateQuad();
     DX_CreateCube();
     
-    
     ourDirectXContext.myConstantBuffer.myBufferSize = sizeof(ourDirectXContext.my3DConstants);
     ourDirectXContext.myConstantBuffer.myBufferIndex = 0;
     DX_CreateConstantBuffer(ourDirectXContext.myConstantBuffer);
+    
+    DX_CreateShader(ourDirectXContext.myQuadShader, true, "quad.vx", "quad.px");
+    DX_CreateShader(ourDirectXContext.myCubeShader, false, "cube.vx", "cube.px");
 }
 
 void gfx_Shutdown()
@@ -408,15 +520,11 @@ void gfx_Shutdown()
     ourDirectXContext.myDevice->Release();
     ourDirectXContext.myContext->Release();
     
-    DX_renderobject& quad = ourDirectXContext.myQuad;
-    quad.myVertexBuffer->Release();
+    DX_ReleaseRenderObject(ourDirectXContext.myQuad);
+    DX_ReleaseRenderObject(ourDirectXContext.myCube);
     
-    DX_shader& shader = ourDirectXContext.myQuadShader;
-    shader.myVertexShader->Release();
-    shader.myPixelShader->Release();
-    shader.myVertexShaderBuffer->Release();
-    shader.myPixelShaderBuffer->Release();
-    shader.myInputLayout->Release();
+    DX_ReleaseShader(ourDirectXContext.myQuadShader);
+    DX_ReleaseShader(ourDirectXContext.myCubeShader);
 }
 
 void gfx_Viewport(int aX, int aY, int aWidth, int aHeight)
@@ -426,6 +534,8 @@ void gfx_Viewport(int aX, int aY, int aWidth, int aHeight)
     viewport.TopLeftY = aY;
     viewport.Width = aWidth;
     viewport.Height = aHeight;
+    viewport.MinDepth = 0.f;
+    viewport.MaxDepth = 1.f;
     
     ourDirectXContext.myContext->RSSetViewports(1, &viewport);
 }
@@ -438,123 +548,70 @@ void gfx_ClearColor(float aR, float aG, float aB)
     ourDirectXContext.myClearColor[3] = 1;
 }
 
-void CompileShader(const char* someShaderData, const char* anEntryPoint, const char* aVersion, ID3D10Blob*& aBufferOut)
+void gfx_Clear()
 {
-    ID3DBlob* errorBlob = NULL;
-   
-    HRESULT result = D3DCompile(
-        someShaderData,
-        strlen(someShaderData) * sizeof(char),
-        NULL,
-        NULL,
-        NULL,
-        anEntryPoint,
-        aVersion,
-        0,
-        0,
-        &aBufferOut,
-        &errorBlob);
+    ourDirectXContext.myContext->ClearRenderTargetView(
+        ourDirectXContext.myBackBuffer, 
+        ourDirectXContext.myClearColor);
     
-    free((void*)someShaderData);
-    if(result != S_OK)
-    {
-        const char* errorMsg = NULL;
-        if(errorBlob)
-            errorMsg = (const char*)errorBlob->GetBufferPointer();
-        
-        ASSERT(false);
-    }
-    
-    if(errorBlob)
-        errorBlob->Release();
+    ourDirectXContext.myContext->ClearDepthStencilView(
+        ourDirectXContext.myDepthStencil,
+        D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL,
+        1.f,
+        0);
 }
 
-unsigned int gfx_CreateShader(DX_shader& aShader, bool aSprite, const char* aVertexName, const char* aPixelName)
+void gfx_FinishFrame()
 {
-    char fullPath[100];
-    int numChars = snprintf(fullPath, 100, "data/shaders/directx/%s", aVertexName);
-    const char* vertexData = DE_ReadEntireFile(fullPath);
-    
-    numChars = snprintf(fullPath, 100, "data/shaders/directx/%s", aPixelName);
-    const char* pixelData = DE_ReadEntireFile(fullPath);
-    
-    CompileShader(vertexData, "VS", "vs_5_0", aShader.myVertexShaderBuffer);
-    CompileShader(pixelData, "PS", "ps_5_0", aShader.myPixelShaderBuffer);
+    ourDirectXContext.mySwapChain->Present(0, 0);
+}
 
-    HRESULT result = ourDirectXContext.myDevice->CreateVertexShader(
-        aShader.myVertexShaderBuffer->GetBufferPointer(),
-        aShader.myVertexShaderBuffer->GetBufferSize(),
-        NULL,
-        &aShader.myVertexShader);
+unsigned int gfx_CreateTexture(int aWidth, int aHeight, bool aUseAlpha, void* someTextureData)
+{
+    ASSERT(ourDirectXContext.myNextTextureID < 16);
+    
+    D3D11_TEXTURE2D_DESC textureDesc = {};
+    textureDesc.Width = aWidth;
+    textureDesc.Height = aHeight;
+    textureDesc.MipLevels = 1;
+    textureDesc.ArraySize = 1;
+    textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    textureDesc.SampleDesc.Count = 1;
+    textureDesc.SampleDesc.Quality = 0;
+    textureDesc.Usage = D3D11_USAGE_IMMUTABLE;
+    textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    textureDesc.CPUAccessFlags = 0;
+    textureDesc.MiscFlags = 0;
+    
+    D3D11_SUBRESOURCE_DATA textureData = {};
+    textureData.pSysMem = someTextureData;
+    textureData.SysMemPitch = sizeof(unsigned char) * 4  * aWidth;
+    textureData.SysMemSlicePitch = 0;
+    
+    DX_texture& texture = ourDirectXContext.myTextures[ourDirectXContext.myNextTextureID];
+    
+    HRESULT result = ourDirectXContext.myDevice->CreateTexture2D(
+        &textureDesc,
+        &textureData,
+        &texture.myTexture);
     ASSERT(result == S_OK);
     
-    result = ourDirectXContext.myDevice->CreatePixelShader(
-        aShader.myPixelShaderBuffer->GetBufferPointer(),
-        aShader.myPixelShaderBuffer->GetBufferSize(),
+    result = ourDirectXContext.myDevice->CreateShaderResourceView(
+        texture.myTexture,
         NULL,
-        &aShader.myPixelShader);
+        &texture.myShaderResource);
     ASSERT(result == S_OK);
     
-    
-    if(aSprite)
-    {
-        D3D11_INPUT_ELEMENT_DESC layout[] =
-        {
-            { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-            { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-        };
-        UINT numElements = ARRAYSIZE(layout);
-    
-        result = ourDirectXContext.myDevice->CreateInputLayout(
-            layout,
-            numElements,
-            aShader.myVertexShaderBuffer->GetBufferPointer(),
-            aShader.myVertexShaderBuffer->GetBufferSize(),
-            &aShader.myInputLayout);
-    }
-    else 
-    {
-        D3D11_INPUT_ELEMENT_DESC layout[] =
-        {
-            { "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-            { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 16, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-        };
-        UINT numElements = ARRAYSIZE(layout);
-        
-        result = ourDirectXContext.myDevice->CreateInputLayout(
-            layout,
-            numElements,
-            aShader.myVertexShaderBuffer->GetBufferPointer(),
-            aShader.myVertexShaderBuffer->GetBufferSize(),
-            &aShader.myInputLayout);
-    }
-        
-    return 0;
+    return ourDirectXContext.myNextTextureID++;
 }
 
-unsigned int gfx_CreateHardcodedShader()
+void gfx_BindTexture(unsigned int aTextureID, unsigned int aTextureSlot, const char* aShaderTextureName)
 {
-    //DX_shader& shader = ourDirectXContext.myQuadShader;
-    //return gfx_CreateShader(shader, true, "quad.vx", "quad.px");
+    ASSERT(aTextureID < 16);
     
-    DX_shader& shader = ourDirectXContext.myCubeShader;
-    return gfx_CreateShader(shader, false, "cube.vx", "cube.px");
+    ourDirectXContext.myContext->PSSetShaderResources(aTextureSlot, 1, &ourDirectXContext.myTextures[aTextureID].myShaderResource);
 }
 
-void gfx_BindShader(unsigned int aShaderID)
-{
-    //ourDirectXContext.myContext->VSSetShader(ourDirectXContext.myQuadShader.myVertexShader, 0, 0);
-    //ourDirectXContext.myContext->PSSetShader(ourDirectXContext.myQuadShader.myPixelShader, 0, 0);
-    //ourDirectXContext.myContext->IASetInputLayout(ourDirectXContext.myQuadShader.myInputLayout);
-    ourDirectXContext.myContext->VSSetShader(ourDirectXContext.myCubeShader.myVertexShader, 0, 0);
-    ourDirectXContext.myContext->PSSetShader(ourDirectXContext.myCubeShader.myPixelShader, 0, 0);
-    ourDirectXContext.myContext->IASetInputLayout(ourDirectXContext.myCubeShader.myInputLayout);
-    ourDirectXContext.myContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-}
-
-void gfx_ShaderConstanti(unsigned int aShaderID, const char* aConstantName, int aValue)
-{
-}
 
 void gfx_SetProjection(const Matrix& aProjection)
 {
@@ -563,7 +620,7 @@ void gfx_SetProjection(const Matrix& aProjection)
 
 void gfx_SetView(const Matrix& aView)
 {
-    ourDirectXContext.my3DConstants.myView = aView;
+    ourDirectXContext.my3DConstants.myView = InverseSimple(aView);
 }
 
 void gfx_CommitConstantData()
@@ -588,46 +645,14 @@ void gfx_CommitConstantData()
     ourDirectXContext.myContext->VSSetConstantBuffers(buffer.myBufferIndex, 1, &buffer.myBuffer);
 }
 
-unsigned int gfx_CreateTexture(int aWidth, int aHeight, bool aUseAlpha, void* someTextureData)
-{
-    D3D11_TEXTURE2D_DESC textureDesc = {};
-    textureDesc.Width = aWidth;
-    textureDesc.Height = aHeight;
-    textureDesc.MipLevels = 1;
-    textureDesc.ArraySize = 1;
-    textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    textureDesc.SampleDesc.Count = 1;
-    textureDesc.SampleDesc.Quality = 0;
-    textureDesc.Usage = D3D11_USAGE_IMMUTABLE;
-    textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-    textureDesc.CPUAccessFlags = 0;
-    textureDesc.MiscFlags = 0;
-    
-    D3D11_SUBRESOURCE_DATA textureData = {};
-    textureData.pSysMem = someTextureData;
-    textureData.SysMemPitch = sizeof(unsigned char) * 4  * aWidth;
-    textureData.SysMemSlicePitch = 0;
-    
-    HRESULT result = ourDirectXContext.myDevice->CreateTexture2D(
-        &textureDesc,
-        &textureData,
-        &ourDirectXContext.myTexture.myTexture);
-    ASSERT(result == S_OK);
-    
-    result = ourDirectXContext.myDevice->CreateShaderResourceView(
-        ourDirectXContext.myTexture.myTexture,
-        NULL,
-        &ourDirectXContext.myTexture.myShaderResource);
-    ASSERT(result == S_OK);
-    
-    return 0;
-}
 
-void gfx_BindTexture(unsigned int aTextureID, unsigned int aTextureSlot)
+void gfx_Begin2D()
 {
-    ourDirectXContext.myContext->PSSetShaderResources(aTextureSlot, 1, &ourDirectXContext.myTexture.myShaderResource);
+    ourDirectXContext.myContext->VSSetShader(ourDirectXContext.myQuadShader.myVertexShader, 0, 0);
+    ourDirectXContext.myContext->PSSetShader(ourDirectXContext.myQuadShader.myPixelShader, 0, 0);
+    ourDirectXContext.myContext->IASetInputLayout(ourDirectXContext.myQuadShader.myInputLayout);
+    ourDirectXContext.myContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 }
-
 
 void gfx_DrawQuad()
 {
@@ -649,8 +674,19 @@ void gfx_DrawQuad()
     ourDirectXContext.myContext->DrawIndexed(6, 0, 0);
 }
 
+void gfx_Begin3D()
+{
+    ourDirectXContext.myContext->VSSetShader(ourDirectXContext.myCubeShader.myVertexShader, 0, 0);
+    ourDirectXContext.myContext->PSSetShader(ourDirectXContext.myCubeShader.myPixelShader, 0, 0);
+    ourDirectXContext.myContext->IASetInputLayout(ourDirectXContext.myCubeShader.myInputLayout);
+    ourDirectXContext.myContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+}
+
 void gfx_DrawCube(const Matrix& aTransform)
 {
+    ourDirectXContext.myModelConstants.myWorld = aTransform;
+    ourDirectXContext.myModelConstants.myColor = {1.f, 1.f, 1.f, 1.f};
+    
     DX_renderobject& cube = ourDirectXContext.myCube;
     DX_constantBuffer& buffer = cube.myConstantBuffer;
     
@@ -663,7 +699,7 @@ void gfx_DrawCube(const Matrix& aTransform)
         &resource);
     ASSERT(result == S_OK);
     
-    memcpy(resource.pData, &aTransform, sizeof(Matrix));
+    memcpy(resource.pData, &ourDirectXContext.myModelConstants, sizeof(ourDirectXContext.myModelConstants));
     
     ourDirectXContext.myContext->Unmap(
         buffer.myBuffer,
@@ -689,20 +725,45 @@ void gfx_DrawCube(const Matrix& aTransform)
     ourDirectXContext.myContext->DrawIndexed(36, 0, 0);
 }
 
-void gfx_Clear()
+void gfx_DrawColoredCube(const Matrix& aTransform, const Vector4f& aColor)
 {
-    ourDirectXContext.myContext->ClearRenderTargetView(
-        ourDirectXContext.myBackBuffer, 
-        ourDirectXContext.myClearColor);
+    ourDirectXContext.myModelConstants.myWorld = aTransform;
+    ourDirectXContext.myModelConstants.myColor = aColor;
     
-    ourDirectXContext.myContext->ClearDepthStencilView(
-        ourDirectXContext.myDepthStencil,
-        D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL,
-        1.f,
+    DX_renderobject& cube = ourDirectXContext.myCube;
+    DX_constantBuffer& buffer = cube.myConstantBuffer;
+    
+    D3D11_MAPPED_SUBRESOURCE resource;
+    HRESULT result = ourDirectXContext.myContext->Map(
+        buffer.myBuffer,
+        0,
+        D3D11_MAP_WRITE_DISCARD,
+        0,
+        &resource);
+    ASSERT(result == S_OK);
+    
+    memcpy(resource.pData, &ourDirectXContext.myModelConstants, sizeof(ourDirectXContext.myModelConstants));
+    
+    ourDirectXContext.myContext->Unmap(
+        buffer.myBuffer,
         0);
-}
-
-void gfx_FinishFrame()
-{
-    ourDirectXContext.mySwapChain->Present(0, 0);
+    
+    ourDirectXContext.myContext->VSSetConstantBuffers(buffer.myBufferIndex, 1, &buffer.myBuffer);
+    
+    UINT stride = sizeof(DX_cubeVertex);
+    UINT offset = 0;
+    
+    ourDirectXContext.myContext->IASetVertexBuffers(
+        0, 
+        1, 
+        &cube.myVertexBuffer, 
+        &stride, 
+        &offset);
+    
+    ourDirectXContext.myContext->IASetIndexBuffer(
+        cube.myIndexBuffer, 
+        DXGI_FORMAT_R32_UINT, 
+        0);
+    
+    ourDirectXContext.myContext->DrawIndexed(36, 0, 0);
 }

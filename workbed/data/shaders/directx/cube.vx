@@ -7,7 +7,7 @@ cbuffer GlobalData
 cbuffer ObjectData
 {
 	Matrix World;	
-	//float4 ColorAndMetalness;
+	float4 ColorAndMetalness;
 	//float4 ScaleAndRoughness;
 };
 
@@ -42,6 +42,6 @@ PosNormColorPixel VS(PosNormColorVertex aInput)
 
 	output.NormalAndRoughness.xyz = aInput.Normal.xyz;
 	//output.NormalAndRoughness.w = ScaleAndRoughness.w;
-	//output.ColorAndMetalness = ColorAndMetalness;
+	output.ColorAndMetalness = ColorAndMetalness;
 	return output;
 };
