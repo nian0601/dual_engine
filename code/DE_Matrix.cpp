@@ -39,7 +39,7 @@ Matrix operator*=(Matrix& aA, const Matrix& aB)
 		original.myData[1] * aB.myData[7] +
 		original.myData[2] * aB.myData[11] +
 		original.myData[3] * aB.myData[15];
-
+    
 	aA.myData[4] =
 		original.myData[4] * aB.myData[0] +
 		original.myData[5] * aB.myData[4] +
@@ -60,7 +60,7 @@ Matrix operator*=(Matrix& aA, const Matrix& aB)
 		original.myData[5] * aB.myData[7] +
 		original.myData[6] * aB.myData[11] +
 		original.myData[7] * aB.myData[15];
-
+    
 	aA.myData[8] =
 		original.myData[8] * aB.myData[0] +
 		original.myData[9] * aB.myData[4] +
@@ -81,7 +81,7 @@ Matrix operator*=(Matrix& aA, const Matrix& aB)
 		original.myData[9] * aB.myData[7] +
 		original.myData[10] * aB.myData[11] +
 		original.myData[11] * aB.myData[15];
-
+    
 	aA.myData[12] =
 		original.myData[12] * aB.myData[0] +
 		original.myData[13] * aB.myData[4] +
@@ -188,13 +188,13 @@ Matrix ProjectionMatrix(float aNearZ, float aFarZ, float aAspectRatio, float aFo
 	float CosFov = cos(0.5f * aFovAngle);
     
 	float scaling = aFarZ / (aFarZ - aNearZ);
-
+    
     Matrix result = {};
 	result.myData[0] = CosFov / SinFov;
 	result.myData[5] = (CosFov / SinFov) / aAspectRatio;
 	result.myData[10] = scaling;
 	result.myData[11] = 1.0f;
-
+    
 	result.myData[14] = -scaling * aNearZ;
 	result.myData[15] = 0.0f;
 	return result;
@@ -203,27 +203,27 @@ Matrix ProjectionMatrix(float aNearZ, float aFarZ, float aAspectRatio, float aFo
 Matrix OrthagonalMatrix(float aWidth, float aHeight, float aNearZ, float aFarZ)
 {
 	Matrix result;
-
+    
 	result.myData[0] = 2.f / aWidth;
 	result.myData[5] = 2.f / aHeight;
 	result.myData[10] = 1.f / (aFarZ - aNearZ);
 	result.myData[14] = aNearZ / (aNearZ - aFarZ);
 	result.myData[15] = 1.f;
-
+    
 	return result;
 }
 
 void Transpose(Matrix& aMatrix)
 {
     Matrix temp = aMatrix;
-
+    
 	aMatrix.myData[1] = temp.myData[4];
 	aMatrix.myData[2] = temp.myData[8];
 	aMatrix.myData[3] = temp.myData[12];
 	aMatrix.myData[7] = temp.myData[13];
 	aMatrix.myData[11] = temp.myData[14];
 	aMatrix.myData[6] = temp.myData[9];
-
+    
 	aMatrix.myData[4] = temp.myData[1];
 	aMatrix.myData[8] = temp.myData[2];
 	aMatrix.myData[12] = temp.myData[3];
@@ -247,6 +247,11 @@ void Translate(Matrix& aMatrix, const Vector3f& aTranslation)
     aMatrix.myRows[3].myData += aTranslation;
 }
 
+void SetTranslation(Matrix& aMatrix, const Vector3f& aTranslation)
+{
+    aMatrix.myRows[3].myData = aTranslation;
+}
+
 Matrix InverseSimple(const Matrix& aMatrix)
 {
     Matrix result = aMatrix;
@@ -259,7 +264,7 @@ Matrix InverseSimple(const Matrix& aMatrix)
     
     Transpose(result);
     position = position * result;
-
+    
     Translate(result, {position.x, position.y, position.z});
     
     return result;

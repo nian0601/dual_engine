@@ -11,7 +11,7 @@
 #include "DE_Math.h"
 #include "gfx_interface.h"
 #include "common_utils.cpp"
-
+#include "game.cpp"
 #define USE_DIRECTX
 
 #ifdef USE_DIRECTX
@@ -133,16 +133,10 @@ int main(int argc, char** argv)
     const float pi = 3.14159265f;
     Matrix projection = ProjectionMatrix(0.1f, 100.f, float(windowHeight) / windowWidth, pi * 0.5f);
     Matrix view = IdentityMatrix();
-    Translate(view, {0.f, 5.f, -7.f});
     
-    Matrix roadTransform = IdentityMatrix(); 
-    roadTransform *= ScaleMatrix({8.f, 2.f, 100.f});
-    Translate(roadTransform, {0.f, 0.f, 50.f});
-    
-    Matrix tankTransform = IdentityMatrix(); 
-    Translate(tankTransform, {0.f, 2.f, 0.f});
-    
+    InitEntities();
     DE_Timer frameTimer = GetTimer();
+    
     while(isRunning)
     {
         UpdateInputState();
@@ -162,6 +156,10 @@ int main(int argc, char** argv)
         if(KeyDownThisFrame(VK_ESCAPE))
             isRunning = false;
         
+        
+        UpdateGame(deltaTime);
+        SetTranslation(view, GetCameraPosition());
+        
         gfx_Clear();
         
 #if 1
@@ -170,8 +168,7 @@ int main(int argc, char** argv)
         gfx_SetProjection(projection);
         gfx_SetView(view);
         gfx_CommitConstantData();
-        gfx_DrawColoredCube(roadTransform, {0.2f, 0.13f, 0.04f, 1.f});        
-        gfx_DrawColoredCube(tankTransform, {0.5f, 0.8f, 0.57f, 1.f});        
+        RenderGame();
         
 #else
         
