@@ -7,6 +7,7 @@
 #include "stb_image.h"
 
 #include "DE_Timer.cpp"
+#include "DE_Input.cpp"
 #include "DE_Math.h"
 #include "gfx_interface.h"
 #include "common_utils.cpp"
@@ -45,6 +46,11 @@ LRESULT CALLBACK WndProc(HWND aHwnd, UINT aMessage, WPARAM aWParam, LPARAM aLPar
         case WM_DESTROY:
         {
             PostQuitMessage(0);
+            return 0;
+        }
+        case WM_INPUT:
+        {
+            OnInputMessage(aWParam, aLParam);
             return 0;
         }
         case WM_SIZE:
@@ -98,6 +104,8 @@ HWND Win32CreateWindow(const char* aTitle, int aWindowWidth, int aWindowHeight)
     
     ASSERT(windowHandle != NULL);
     
+    RegisterInputDevices();
+    
     ShowWindow(windowHandle, 10);
     UpdateWindow(windowHandle);
     
@@ -137,6 +145,10 @@ int main(int argc, char** argv)
     DE_Timer frameTimer = GetTimer();
     while(isRunning)
     {
+        UpdateInputState();
+        UpdateTimer(frameTimer);
+        float deltaTime = GetDeltaTime(frameTimer);
+        
         if(PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
         {
             UINT msgCode = msg.message;
@@ -147,8 +159,8 @@ int main(int argc, char** argv)
             DispatchMessage(&msg);
         }
         
-        UpdateTimer(frameTimer);
-        float deltaTime = GetDeltaTime(frameTimer);
+        if(KeyDownThisFrame(VK_ESCAPE))
+            isRunning = false;
         
         gfx_Clear();
         
