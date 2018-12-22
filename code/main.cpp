@@ -6,6 +6,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
+#include "DE_Timer.cpp"
 #include "DE_Math.h"
 #include "gfx_interface.h"
 #include "common_utils.cpp"
@@ -111,7 +112,7 @@ int main(int argc, char** argv)
     const int windowHeight = 720;
     HWND windowHandle = Win32CreateWindow(windowTitle, windowWidth, windowHeight);
     gfx_Init(windowHandle, windowWidth, windowHeight);
-   
+    
     unsigned int texture0 = LoadTexture(false, "container.jpg");
     unsigned int texture1  = LoadTexture(true, "awesomeface.png");
     
@@ -133,6 +134,7 @@ int main(int argc, char** argv)
     Matrix tankTransform = IdentityMatrix(); 
     Translate(tankTransform, {0.f, 2.f, 0.f});
     
+    DE_Timer frameTimer = GetTimer();
     while(isRunning)
     {
         if(PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
@@ -144,11 +146,14 @@ int main(int argc, char** argv)
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
- 
+        
+        UpdateTimer(frameTimer);
+        float deltaTime = GetDeltaTime(frameTimer);
+        
         gfx_Clear();
         
-        #if 1
-      
+#if 1
+        
         gfx_Begin3D();
         gfx_SetProjection(projection);
         gfx_SetView(view);
@@ -156,16 +161,16 @@ int main(int argc, char** argv)
         gfx_DrawColoredCube(roadTransform, {0.2f, 0.13f, 0.04f, 1.f});        
         gfx_DrawColoredCube(tankTransform, {0.5f, 0.8f, 0.57f, 1.f});        
         
-        #else
+#else
         
         gfx_Begin2D();
         gfx_BindTexture(texture0, 0, "texture0");
         gfx_BindTexture(texture1, 1, "texture1");
         gfx_DrawQuad();        
         
-        #endif
-
-    
+#endif
+        
+        
         gfx_FinishFrame();    
     }
     
