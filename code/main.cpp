@@ -6,12 +6,23 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
+#include "DE_Math.h"
+#include "DE_Collision.h"
+#include "DE_Collision.cpp"
 #include "DE_Timer.cpp"
 #include "DE_Input.cpp"
-#include "DE_Math.h"
 #include "gfx_interface.h"
+
+#include "array.cpp"
 #include "common_utils.cpp"
+
+#include "entity.h"
+#include "entity.cpp"
+
+#include "game.h"
+#include "mapgenerator.cpp"
 #include "game.cpp"
+
 #define USE_DIRECTX
 
 #ifdef USE_DIRECTX
@@ -104,7 +115,7 @@ HWND Win32CreateWindow(const char* aTitle, int aWindowWidth, int aWindowHeight)
     
     ASSERT(windowHandle != NULL);
     
-    RegisterInputDevices();
+    RegisterInputDevices(windowHandle);
     
     ShowWindow(windowHandle, 10);
     UpdateWindow(windowHandle);
@@ -118,6 +129,7 @@ int main(int argc, char** argv)
     
     const int windowWidth = 1280;
     const int windowHeight = 720;
+    Vector2f windowSize = {windowWidth, windowHeight};
     HWND windowHandle = Win32CreateWindow(windowTitle, windowWidth, windowHeight);
     gfx_Init(windowHandle, windowWidth, windowHeight);
     
@@ -125,17 +137,32 @@ int main(int argc, char** argv)
     unsigned int texture1  = LoadTexture(true, "awesomeface.png");
     
     gfx_Viewport(0, 0, windowWidth, windowHeight);
-    gfx_ClearColor(0.8f, 0.2f, 0.f);
+    gfx_ClearColor(0.5f, 0.2f, 0.1f);
     
     MSG msg = {};
     bool isRunning = true;
     
     const float pi = 3.14159265f;
-    Matrix projection = ProjectionMatrix(0.1f, 100.f, float(windowHeight) / windowWidth, pi * 0.5f);
+    Matrix projection = ProjectionMatrix(0.1f, 1000.f, float(windowHeight) / windowWidth, pi * 0.5f);
     Matrix view = IdentityMatrix();
+    Matrix invertedView;
+
+    SetTranslation(view, {0.f, 20.f, -50.f});
+    view = view * RotationMatrixX(pi * 0.25f);
     
-    InitEntities();
     DE_Timer frameTimer = GetTimer();
+
+    SetupGame();
+    
+    GrowingArray<int> testArray = {};
+    ArrayAlloc(testArray, 1);
+    
+    ArrayAdd(testArray, 123);
+    ArrayAdd(testArray, 323);
+    ArrayAdd(testArray, 623);
+    ArrayAdd(testArray, 523);
+    ArrayRemoveCyclic(testArray, 2);
+    ArrayAdd(testArray, 6452);
     
     while(isRunning)
     {
@@ -153,12 +180,20 @@ int main(int argc, char** argv)
             DispatchMessage(&msg);
         }
         
-        if(KeyDownThisFrame(VK_ESCAPE))
+        if(KeyDownThisFrame(DEK_ESCAPE))
             isRunning = false;
         
         
+        UpdateCamera(deltaTime, view);
+        
+        invertedView = InverseSimple(view);
+        ourInput.myMouseRay.myStart = Unproject(
+            ourInput.myMousePosition, 0.f, invertedView, projection, windowSize);
+        ourInput.myMouseRay.myEnd = Unproject(
+            ourInput.myMousePosition, 1.f, invertedView, projection, windowSize);
+        
         UpdateGame(deltaTime);
-        SetTranslation(view, GetCameraPosition());
+        
         
         gfx_Clear();
         
@@ -166,8 +201,9 @@ int main(int argc, char** argv)
         
         gfx_Begin3D();
         gfx_SetProjection(projection);
-        gfx_SetView(view);
+        gfx_SetView(invertedView);
         gfx_CommitConstantData();
+        
         RenderGame();
         
 #else

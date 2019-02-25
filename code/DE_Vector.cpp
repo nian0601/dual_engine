@@ -151,6 +151,30 @@ Vector4f operator/(const Vector4f& aA, const Vector4f& aB)
     return result;
 }
 
+float Dot(const Vector4f& aFirst, const Vector4f& aSecond)
+{
+    return aFirst.x * aSecond.x + aFirst.y * aSecond.y + aFirst.z * aSecond.z + aFirst.w * aSecond.w;
+}
+
+float Length2(const Vector4f& aVector)
+{
+    return Dot(aVector, aVector);
+}
+
+float Length(const Vector4f& aVector)
+{
+    return sqrt(Length2(aVector));
+}
+
+void Normalize(Vector4f& aVector)
+{
+    float length = Length(aVector);
+    if(length == 0.f)
+        return;
+    
+    aVector /= length;
+}
+
 // Vector3
 
 struct Vector3f
@@ -294,6 +318,30 @@ Vector3f operator/(const Vector3f& aA, const Vector3f& aB)
     return result;
 }
 
+float Dot(const Vector3f& aFirst, const Vector3f& aSecond)
+{
+    return aFirst.x * aSecond.x + aFirst.y * aSecond.y + aFirst.z * aSecond.z;
+}
+
+float Length2(const Vector3f& aVector)
+{
+    return Dot(aVector, aVector);
+}
+
+float Length(const Vector3f& aVector)
+{
+    return sqrt(Length2(aVector));
+}
+
+
+void Normalize(Vector3f& aVector)
+{
+    float length = Length(aVector);
+    if(length == 0.f)
+        return;
+    
+    aVector /= length;
+}
 // Vector2
 
 struct Vector2f
@@ -426,4 +474,28 @@ Vector2f operator/(const Vector2f& aA, const Vector2f& aB)
     Vector2f result = aA;
     result /= aB;
     return result;
+}
+
+float Dot(const Vector2f& aFirst, const Vector2f& aSecond)
+{
+    return aFirst.x * aSecond.x + aFirst.y * aSecond.y;
+}
+
+float Length2(const Vector2f& aVector)
+{
+    return Dot(aVector, aVector);
+}
+
+float Length(const Vector2f& aVector)
+{
+    return sqrt(Length2(aVector));
+}
+
+void Normalize(Vector2f& aVector)
+{
+    float length = Length(aVector);
+    if(length == 0.f)
+        return;
+    
+    aVector /= length;
 }

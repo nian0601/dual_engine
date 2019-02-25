@@ -620,7 +620,7 @@ void gfx_SetProjection(const Matrix& aProjection)
 
 void gfx_SetView(const Matrix& aView)
 {
-    ourDirectXContext.my3DConstants.myView = InverseSimple(aView);
+    ourDirectXContext.my3DConstants.myView = aView;
 }
 
 void gfx_CommitConstantData()

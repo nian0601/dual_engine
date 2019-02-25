@@ -128,7 +128,7 @@ Vector4f operator*(const Vector4f& aVector, const Matrix& aMatrix)
     result.x = aVector.x * aMatrix.myData[0] + aVector.y * aMatrix.myData[4] + aVector.z * aMatrix.myData[8] + aVector.w * aMatrix.myData[12];
     result.y = aVector.x * aMatrix.myData[1] + aVector.y * aMatrix.myData[5] + aVector.z * aMatrix.myData[9] + aVector.w * aMatrix.myData[13];
     result.z = aVector.x * aMatrix.myData[2] + aVector.y * aMatrix.myData[6] + aVector.z * aMatrix.myData[10] + aVector.w * aMatrix.myData[14];
-    result.w = aVector.x * aMatrix.myData[2] + aVector.y * aMatrix.myData[6] + aVector.z * aMatrix.myData[10] + aVector.w * aMatrix.myData[15];
+    result.w = aVector.x * aMatrix.myData[3] + aVector.y * aMatrix.myData[7] + aVector.z * aMatrix.myData[11] + aVector.w * aMatrix.myData[15];
     return result;
 }
 
@@ -146,9 +146,10 @@ Matrix RotationMatrixX(float aRadian)
 {
     Matrix result = IdentityMatrix();
     result.myData[5] = cos(aRadian);
-    result.myData[5] = sin(aRadian);
+    result.myData[6] = sin(aRadian);
     result.myData[9] = -sin(aRadian);
     result.myData[10] = cos(aRadian);
+    
     return result;
 }
 
@@ -252,6 +253,21 @@ void SetTranslation(Matrix& aMatrix, const Vector3f& aTranslation)
     aMatrix.myRows[3].myData = aTranslation;
 }
 
+void TranslateRight(Matrix& aMatrix, float aDistance)
+{
+    Translate(aMatrix, aMatrix.myRows[0].myData * aDistance);
+}
+
+void TranslateUp(Matrix& aMatrix, float aDistance)
+{
+    Translate(aMatrix, aMatrix.myRows[1].myData * aDistance);
+}
+
+void TranslateForward(Matrix& aMatrix, float aDistance)
+{
+    Translate(aMatrix, aMatrix.myRows[2].myData * aDistance);
+}
+
 Matrix InverseSimple(const Matrix& aMatrix)
 {
     Matrix result = aMatrix;
@@ -268,4 +284,133 @@ Matrix InverseSimple(const Matrix& aMatrix)
     Translate(result, {position.x, position.y, position.z});
     
     return result;
+}
+
+Matrix InverseReal(const Matrix& aMatrix)
+{
+	float inv[16], det;
+	int i;
+
+	inv[0] = aMatrix.myData[5] * aMatrix.myData[10] * aMatrix.myData[15] -
+		aMatrix.myData[5] * aMatrix.myData[11] * aMatrix.myData[14] -
+		aMatrix.myData[9] * aMatrix.myData[6] * aMatrix.myData[15] +
+		aMatrix.myData[9] * aMatrix.myData[7] * aMatrix.myData[14] +
+		aMatrix.myData[13] * aMatrix.myData[6] * aMatrix.myData[11] -
+		aMatrix.myData[13] * aMatrix.myData[7] * aMatrix.myData[10];
+
+	inv[4] = -aMatrix.myData[4] * aMatrix.myData[10] * aMatrix.myData[15] +
+		aMatrix.myData[4] * aMatrix.myData[11] * aMatrix.myData[14] +
+		aMatrix.myData[8] * aMatrix.myData[6] * aMatrix.myData[15] -
+		aMatrix.myData[8] * aMatrix.myData[7] * aMatrix.myData[14] -
+		aMatrix.myData[12] * aMatrix.myData[6] * aMatrix.myData[11] +
+		aMatrix.myData[12] * aMatrix.myData[7] * aMatrix.myData[10];
+
+	inv[8] = aMatrix.myData[4] * aMatrix.myData[9] * aMatrix.myData[15] -
+		aMatrix.myData[4] * aMatrix.myData[11] * aMatrix.myData[13] -
+		aMatrix.myData[8] * aMatrix.myData[5] * aMatrix.myData[15] +
+		aMatrix.myData[8] * aMatrix.myData[7] * aMatrix.myData[13] +
+		aMatrix.myData[12] * aMatrix.myData[5] * aMatrix.myData[11] -
+		aMatrix.myData[12] * aMatrix.myData[7] * aMatrix.myData[9];
+
+	inv[12] = -aMatrix.myData[4] * aMatrix.myData[9] * aMatrix.myData[14] +
+		aMatrix.myData[4] * aMatrix.myData[10] * aMatrix.myData[13] +
+		aMatrix.myData[8] * aMatrix.myData[5] * aMatrix.myData[14] -
+		aMatrix.myData[8] * aMatrix.myData[6] * aMatrix.myData[13] -
+		aMatrix.myData[12] * aMatrix.myData[5] * aMatrix.myData[10] +
+		aMatrix.myData[12] * aMatrix.myData[6] * aMatrix.myData[9];
+
+	inv[1] = -aMatrix.myData[1] * aMatrix.myData[10] * aMatrix.myData[15] +
+		aMatrix.myData[1] * aMatrix.myData[11] * aMatrix.myData[14] +
+		aMatrix.myData[9] * aMatrix.myData[2] * aMatrix.myData[15] -
+		aMatrix.myData[9] * aMatrix.myData[3] * aMatrix.myData[14] -
+		aMatrix.myData[13] * aMatrix.myData[2] * aMatrix.myData[11] +
+		aMatrix.myData[13] * aMatrix.myData[3] * aMatrix.myData[10];
+
+	inv[5] = aMatrix.myData[0] * aMatrix.myData[10] * aMatrix.myData[15] -
+		aMatrix.myData[0] * aMatrix.myData[11] * aMatrix.myData[14] -
+		aMatrix.myData[8] * aMatrix.myData[2] * aMatrix.myData[15] +
+		aMatrix.myData[8] * aMatrix.myData[3] * aMatrix.myData[14] +
+		aMatrix.myData[12] * aMatrix.myData[2] * aMatrix.myData[11] -
+		aMatrix.myData[12] * aMatrix.myData[3] * aMatrix.myData[10];
+
+	inv[9] = -aMatrix.myData[0] * aMatrix.myData[9] * aMatrix.myData[15] +
+		aMatrix.myData[0] * aMatrix.myData[11] * aMatrix.myData[13] +
+		aMatrix.myData[8] * aMatrix.myData[1] * aMatrix.myData[15] -
+		aMatrix.myData[8] * aMatrix.myData[3] * aMatrix.myData[13] -
+		aMatrix.myData[12] * aMatrix.myData[1] * aMatrix.myData[11] +
+		aMatrix.myData[12] * aMatrix.myData[3] * aMatrix.myData[9];
+
+	inv[13] = aMatrix.myData[0] * aMatrix.myData[9] * aMatrix.myData[14] -
+		aMatrix.myData[0] * aMatrix.myData[10] * aMatrix.myData[13] -
+		aMatrix.myData[8] * aMatrix.myData[1] * aMatrix.myData[14] +
+		aMatrix.myData[8] * aMatrix.myData[2] * aMatrix.myData[13] +
+		aMatrix.myData[12] * aMatrix.myData[1] * aMatrix.myData[10] -
+		aMatrix.myData[12] * aMatrix.myData[2] * aMatrix.myData[9];
+
+	inv[2] = aMatrix.myData[1] * aMatrix.myData[6] * aMatrix.myData[15] -
+		aMatrix.myData[1] * aMatrix.myData[7] * aMatrix.myData[14] -
+		aMatrix.myData[5] * aMatrix.myData[2] * aMatrix.myData[15] +
+		aMatrix.myData[5] * aMatrix.myData[3] * aMatrix.myData[14] +
+		aMatrix.myData[13] * aMatrix.myData[2] * aMatrix.myData[7] -
+		aMatrix.myData[13] * aMatrix.myData[3] * aMatrix.myData[6];
+
+	inv[6] = -aMatrix.myData[0] * aMatrix.myData[6] * aMatrix.myData[15] +
+		aMatrix.myData[0] * aMatrix.myData[7] * aMatrix.myData[14] +
+		aMatrix.myData[4] * aMatrix.myData[2] * aMatrix.myData[15] -
+		aMatrix.myData[4] * aMatrix.myData[3] * aMatrix.myData[14] -
+		aMatrix.myData[12] * aMatrix.myData[2] * aMatrix.myData[7] +
+		aMatrix.myData[12] * aMatrix.myData[3] * aMatrix.myData[6];
+
+	inv[10] = aMatrix.myData[0] * aMatrix.myData[5] * aMatrix.myData[15] -
+		aMatrix.myData[0] * aMatrix.myData[7] * aMatrix.myData[13] -
+		aMatrix.myData[4] * aMatrix.myData[1] * aMatrix.myData[15] +
+		aMatrix.myData[4] * aMatrix.myData[3] * aMatrix.myData[13] +
+		aMatrix.myData[12] * aMatrix.myData[1] * aMatrix.myData[7] -
+		aMatrix.myData[12] * aMatrix.myData[3] * aMatrix.myData[5];
+
+	inv[14] = -aMatrix.myData[0] * aMatrix.myData[5] * aMatrix.myData[14] +
+		aMatrix.myData[0] * aMatrix.myData[6] * aMatrix.myData[13] +
+		aMatrix.myData[4] * aMatrix.myData[1] * aMatrix.myData[14] -
+		aMatrix.myData[4] * aMatrix.myData[2] * aMatrix.myData[13] -
+		aMatrix.myData[12] * aMatrix.myData[1] * aMatrix.myData[6] +
+		aMatrix.myData[12] * aMatrix.myData[2] * aMatrix.myData[5];
+
+	inv[3] = -aMatrix.myData[1] * aMatrix.myData[6] * aMatrix.myData[11] +
+		aMatrix.myData[1] * aMatrix.myData[7] * aMatrix.myData[10] +
+		aMatrix.myData[5] * aMatrix.myData[2] * aMatrix.myData[11] -
+		aMatrix.myData[5] * aMatrix.myData[3] * aMatrix.myData[10] -
+		aMatrix.myData[9] * aMatrix.myData[2] * aMatrix.myData[7] +
+		aMatrix.myData[9] * aMatrix.myData[3] * aMatrix.myData[6];
+
+	inv[7] = aMatrix.myData[0] * aMatrix.myData[6] * aMatrix.myData[11] -
+		aMatrix.myData[0] * aMatrix.myData[7] * aMatrix.myData[10] -
+		aMatrix.myData[4] * aMatrix.myData[2] * aMatrix.myData[11] +
+		aMatrix.myData[4] * aMatrix.myData[3] * aMatrix.myData[10] +
+		aMatrix.myData[8] * aMatrix.myData[2] * aMatrix.myData[7] -
+		aMatrix.myData[8] * aMatrix.myData[3] * aMatrix.myData[6];
+
+	inv[11] = -aMatrix.myData[0] * aMatrix.myData[5] * aMatrix.myData[11] +
+		aMatrix.myData[0] * aMatrix.myData[7] * aMatrix.myData[9] +
+		aMatrix.myData[4] * aMatrix.myData[1] * aMatrix.myData[11] -
+		aMatrix.myData[4] * aMatrix.myData[3] * aMatrix.myData[9] -
+		aMatrix.myData[8] * aMatrix.myData[1] * aMatrix.myData[7] +
+		aMatrix.myData[8] * aMatrix.myData[3] * aMatrix.myData[5];
+
+	inv[15] = aMatrix.myData[0] * aMatrix.myData[5] * aMatrix.myData[10] -
+		aMatrix.myData[0] * aMatrix.myData[6] * aMatrix.myData[9] -
+		aMatrix.myData[4] * aMatrix.myData[1] * aMatrix.myData[10] +
+		aMatrix.myData[4] * aMatrix.myData[2] * aMatrix.myData[9] +
+		aMatrix.myData[8] * aMatrix.myData[1] * aMatrix.myData[6] -
+		aMatrix.myData[8] * aMatrix.myData[2] * aMatrix.myData[5];
+
+	det = aMatrix.myData[0] * inv[0] + aMatrix.myData[1] * inv[4] + aMatrix.myData[2] * inv[8] + aMatrix.myData[3] * inv[12];
+
+	det = 1.0f / det;
+
+	Matrix returnMatrix;
+
+	for (i = 0; i < 16; i++)
+		returnMatrix.myData[i] = inv[i] * det;
+
+	return returnMatrix;
 }
