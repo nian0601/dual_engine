@@ -1,10 +1,32 @@
 template <typename T>
 struct GrowingArray
 {
+    T& operator[](const int& aIndex);
+	const T& operator[](const int& aIndex) const;
+    
     int myCount;
     int myMaxCount;
     T* myData;
 };
+
+template<typename T>
+inline T& GrowingArray<T>::operator[](const int& aIndex)
+{
+	ASSERT(aIndex >= 0);
+	ASSERT(aIndex < myCount);
+    
+	return myData[aIndex];
+}
+
+template<typename T>
+const T& GrowingArray<T>::operator[](const int& aIndex) const
+{
+	ASSERT(aIndex >= 0);
+	ASSERT(aIndex < myCount);
+    
+	return myData[aIndex];
+}
+
 
 template <typename T>
 void ArrayAlloc(GrowingArray<T>& anArray, int aCount)

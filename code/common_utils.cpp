@@ -15,3 +15,11 @@ const char* DE_ReadEntireFile(const char* aFilePath)
     string[fileSize] = 0;
     return string;
 }
+
+template <typename T>
+void Swap(T& aA, T& aB)
+{
+    T temp = aA;
+    aA = aB;
+    aB = temp;
+}

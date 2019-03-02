@@ -13,8 +13,9 @@
 #include "DE_Input.cpp"
 #include "gfx_interface.h"
 
-#include "array.cpp"
 #include "common_utils.cpp"
+#include "array.cpp"
+#include "heap.cpp"
 
 #include "entity.h"
 #include "entity.cpp"
@@ -163,6 +164,17 @@ int main(int argc, char** argv)
     ArrayAdd(testArray, 523);
     ArrayRemoveCyclic(testArray, 2);
     ArrayAdd(testArray, 6452);
+    
+    Heap<int> testHeap = {};
+    ArrayAlloc(testHeap.myData, 10);
+    HeapAdd(testHeap, 52);
+    HeapAdd(testHeap, 27);
+    HeapAdd(testHeap, 100);
+    HeapAdd(testHeap, 19);
+    HeapAdd(testHeap, 101);
+    
+    int best = HeapTake(testHeap);
+    int best2 = HeapTake(testHeap);
     
     while(isRunning)
     {
