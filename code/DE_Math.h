@@ -37,3 +37,11 @@ float Random01()
 {
     return (rand() % 10000) / 10000.f;
 }
+
+int Round(float aNumber)
+{
+    if(aNumber > 0.f)
+        return static_cast<int>(aNumber + 0.5f);
+    
+    return static_cast<int>(aNumber - 0.5f);
+}

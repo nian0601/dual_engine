@@ -8,6 +8,8 @@ void SetupGame()
         PlaceEntity(ourGameState.myPlayer, spawnPosition->myPosition, playerSize);
         PlaceEntityOnTop(ourGameState.myPlayer, *spawnPosition);
     }
+    
+    ArrayAlloc(ourGameState.myPlayerPath.myPoints, 10);
 }
 
 void UpdateCamera(float aDeltaTime, Matrix& aViewMatrix)
@@ -63,7 +65,13 @@ void HighlightEntityUnderMouse()
      
 }
 
-void UpdateEntityMovement(Entity& anEntity, float aDeltaTime)
+Vector3f GetCurrentPathTarget()
+{
+    Path& path = ourGameState.myPlayerPath;
+    return GetPositionOnTopOfEntity(*path.myPoints[path.myCurrentPoint]);
+}
+
+bool UpdateEntityMovement(Entity& anEntity, float aDeltaTime)
 {
     const float minDist = 0.15f * 0.15f;
     const float movementSpeed = 5.f;
@@ -73,12 +81,27 @@ void UpdateEntityMovement(Entity& anEntity, float aDeltaTime)
     if(distance <= minDist)
     {
         anEntity.myPosition = anEntity.myTargetPosition;
-        return;
+        return true;
     }
     
     Normalize(direction);
     
     anEntity.myPosition += direction * movementSpeed * aDeltaTime;
+    
+    return false;
+}
+
+void FollowPath(float aDeltaTime)
+{
+    if(UpdateEntityMovement(ourGameState.myPlayer, aDeltaTime))
+    {
+        Path& path = ourGameState.myPlayerPath;
+        if(path.myCurrentPoint <= 0)
+            return;
+        
+        path.myCurrentPoint--;
+        ourGameState.myPlayer.myTargetPosition = GetCurrentPathTarget();
+    }
 }
 
 void UpdateGame(float aDeltaTime)
@@ -86,9 +109,14 @@ void UpdateGame(float aDeltaTime)
     HighlightEntityUnderMouse();
     
     if(MouseDownThisFrame(DEK_LEFTMOUSE) && ourGameState.myEntityUnderMouse)
-        ourGameState.myPlayer.myTargetPosition = GetPositionOnTopOfEntity(*ourGameState.myEntityUnderMouse);
+    {
+        int playerArrayIndex = GetArrayIndex(ourGameState.myPlayer.myPosition);
+        Entity& entityUnderPlayer = ourGameState.myMap.myTiles[playerArrayIndex];
+        if(Pathfind(entityUnderPlayer, *ourGameState.myEntityUnderMouse, ourGameState.myPlayerPath))
+            ourGameState.myPlayer.myTargetPosition = GetCurrentPathTarget();   
+    }
     
-    UpdateEntityMovement(ourGameState.myPlayer, aDeltaTime);
+    FollowPath(aDeltaTime);
 }
 
 void RenderGame()

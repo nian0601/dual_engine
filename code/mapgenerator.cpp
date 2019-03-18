@@ -1,7 +1,37 @@
-
 int GetArrayIndex(int aX, int aZ)
 {
     return aZ * GRIDSIZE + aX;
+}
+
+void GetGridIndex(int aArrayIndex, int& aX, int& aZ)
+{
+    aX = aArrayIndex % GRIDSIZE;
+    aZ = aArrayIndex / GRIDSIZE;
+}
+
+int GetArrayIndex(const Vector3f& aWorldPosition)
+{
+    int gridX = Round(aWorldPosition.x / CELLSIZE);
+    int gridZ = Round(aWorldPosition.z / CELLSIZE);
+    return GetArrayIndex(gridX, gridZ);
+}
+
+void ClearPathfindingNodes()
+{
+    for(int z = 0; z < GRIDSIZE; ++z)
+    {
+        for(int x = 0; x < GRIDSIZE; ++x)
+        {
+            int index = GetArrayIndex(x, z);
+            PathNode& node = ourGameState.myMap.myPathNodes[index];
+            
+            node.myParent = nullptr;
+            node.myCurrentCost = FLT_MAX;
+            node.myHeuristic = 0;
+            node.myTotalCost = 0;
+            node.myState = PathNode::NOT_VISITED;
+        }
+    }   
 }
 
 void ClearMap()
@@ -13,7 +43,7 @@ void ClearMap()
     {
         for(int x = 0; x < GRIDSIZE; ++x)
         {
-            position.x = x * CELLSIZE - ((GRIDSIZE * 0.5f) * CELLSIZE);
+            position.x = x * CELLSIZE;
             position.z = z * CELLSIZE;
             
             int index = GetArrayIndex(x, z);
@@ -21,10 +51,15 @@ void ClearMap()
             PlaceEntity(tile, position, size);
             
             tile.myIsHighlighted = false;
+            tile.myMapIndex = index;
             
             ourGameState.myMap.myTileTypes[index] = GRASS;
+            
+            ourGameState.myMap.myPathNodes[index].myEntity = &tile;
         }
     }
+    
+    ClearPathfindingNodes();
 }
 
 int GetNeighbourCount(TileType aNeighbourType, int aX, int aZ)
@@ -151,6 +186,14 @@ void RenderTile(int aIndex)
     if(tile.myIsHighlighted)
         color = {1.f, 1.f, 1.f, 1.f};
     
+    PathNode* pathNode = &ourGameState.myMap.myPathNodes[aIndex];
+    switch(pathNode->myState)
+    {
+        case PathNode::IN_OPEN: color = {0.1f, 0.8f, 0.1f, 1.f}; break;
+        case PathNode::IN_CLOSED: color = {1.f, 0.1f, 0.1f, 1.f}; break;
+        //case PathNode::NOT_VISITED: color = {0.1f, 0.1f, 0.1f, 1.f}; break;
+    }
+    
     RenderEntity(tile, color);
 }
 
@@ -159,4 +202,122 @@ void RenderMap()
 {
     for(int i = 0; i < GRIDSIZE*GRIDSIZE; ++i)
         RenderTile(i);
+}
+
+
+// MOVE TO OWN FILE AT SOME POINT
+static int ourCostPerMove = 100;
+float CalculateHeuristic(PathNode* aStart, PathNode* aGoal)
+{
+    int x1 = static_cast<int>(aStart->myEntity->myPosition.x);
+    int x2 = static_cast<int>(aGoal->myEntity->myPosition.x);
+    int z1 = static_cast<int>(aStart->myEntity->myPosition.z);
+    int z2 = static_cast<int>(aGoal->myEntity->myPosition.z);
+    
+    return 10 * abs(x1 - x2) + abs(z1 - z2);
+}
+
+void UpdateNodeValues(PathNode* aParentNode, PathNode* aNode)
+{   
+    aNode->myParent = aParentNode;
+    
+    // Add IsStraight-check here to prefer straight checks, by adding a negative cost
+    aNode->myCurrentCost = aParentNode->myCurrentCost + ourCostPerMove;
+    aNode->myTotalCost = aNode->myCurrentCost + aNode->myHeuristic;
+}
+
+void EvaluateNeighbour(PointerHeap<PathNode*>& aHeap, PathNode* aCurrentNode, PathNode* aNeighbourNode, PathNode* aEndNode)
+{
+    if(aNeighbourNode->myState == PathNode::IN_CLOSED)
+        return;
+    
+    TileType tileType = ourGameState.myMap.myTileTypes[aNeighbourNode->myEntity->myMapIndex];
+    if(tileType == SHALLOW_WATER || tileType == DEEP_WATER)
+        return;
+    
+    if(aNeighbourNode->myState == PathNode::IN_OPEN)
+    {
+        if(aNeighbourNode->myCurrentCost > aCurrentNode->myCurrentCost + ourCostPerMove)
+        {
+            UpdateNodeValues(aCurrentNode, aNeighbourNode);
+            HeapHeapify(aHeap);
+        }
+    }
+    else
+    {
+        aNeighbourNode->myHeuristic = CalculateHeuristic(aNeighbourNode, aEndNode);
+        UpdateNodeValues(aCurrentNode, aNeighbourNode);
+        
+        aNeighbourNode->myState = PathNode::IN_OPEN;
+        HeapAdd(aHeap, aNeighbourNode);
+    }
+}
+
+bool Pathfind(Entity& aStart, Entity& aEnd, Path& aPathOut)
+{
+    ClearPathfindingNodes();
+    ArrayClear(aPathOut.myPoints);
+    
+    PathNode* nodes = ourGameState.myMap.myPathNodes;
+    
+    PathNode* startNode = &nodes[aStart.myMapIndex];
+    PathNode* endNode = &nodes[aEnd.myMapIndex];
+    
+    startNode->myCurrentCost = 0;
+    startNode->myHeuristic = CalculateHeuristic(startNode, endNode);
+    startNode->myTotalCost = startNode->myHeuristic + startNode->myCurrentCost;
+    startNode->myState = PathNode::IN_OPEN;
+    
+    PointerHeap<PathNode*> heap = {};
+    ArrayAlloc(heap.myData, 10);
+    HeapAdd(heap, startNode);
+    
+    int x;
+    int z;
+    while(heap.myData.myCount > 0)
+    {
+        PathNode* currNode = HeapTake(heap);
+        if(currNode->myEntity->myMapIndex == aEnd.myMapIndex)
+        {
+            const PathNode* node = currNode;
+            while(node)
+            {
+                ArrayAdd(aPathOut.myPoints, node->myEntity);
+                node = node->myParent;
+            }
+            
+            aPathOut.myCurrentPoint = aPathOut.myPoints.myCount-1;
+            return true;
+        }
+        
+        GetGridIndex(currNode->myEntity->myMapIndex, x, z);
+        
+        if(x + 1 < GRIDSIZE)
+        {
+            PathNode* nextNode = &nodes[GetArrayIndex(x+1, z)];
+            EvaluateNeighbour(heap, currNode, nextNode, endNode);
+        }
+        
+        if(x - 1 >= 0)
+        {
+            PathNode* nextNode = &nodes[GetArrayIndex(x-1, z)];
+            EvaluateNeighbour(heap, currNode, nextNode, endNode);
+        }
+        
+        if(z + 1 < GRIDSIZE)
+        {
+            PathNode* nextNode = &nodes[GetArrayIndex(x, z+1)];
+            EvaluateNeighbour(heap, currNode, nextNode, endNode);
+        }
+        
+        if(z - 1 >= 0)
+        {
+            PathNode* nextNode = &nodes[GetArrayIndex(x, z-1)];
+            EvaluateNeighbour(heap, currNode, nextNode, endNode);
+        }
+        
+        currNode->myState = PathNode::IN_CLOSED;
+    }
+    
+    return false;
 }
