@@ -8,6 +8,6 @@ in vec4 ColorAndMetalness;
 
 void main()
 {
-   FragColor = vec4(abs(NormalAndRoughness.xyz), 1.0);
+   FragColor = vec4(abs(ColorAndMetalness.xyz), 1.0);
    //FragColor = vec4(1.0, 1.0, 1.0, 1.0);
 };

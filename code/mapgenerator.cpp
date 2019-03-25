@@ -186,6 +186,7 @@ void RenderTile(int aIndex)
     if(tile.myIsHighlighted)
         color = {1.f, 1.f, 1.f, 1.f};
     
+    #if 0
     PathNode* pathNode = &ourGameState.myMap.myPathNodes[aIndex];
     switch(pathNode->myState)
     {
@@ -193,6 +194,7 @@ void RenderTile(int aIndex)
         case PathNode::IN_CLOSED: color = {1.f, 0.1f, 0.1f, 1.f}; break;
         //case PathNode::NOT_VISITED: color = {0.1f, 0.1f, 0.1f, 1.f}; break;
     }
+    #endif
     
     RenderEntity(tile, color);
 }

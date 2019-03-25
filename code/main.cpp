@@ -24,7 +24,7 @@
 #include "mapgenerator.cpp"
 #include "game.cpp"
 
-#define USE_DIRECTX
+//#define USE_DIRECTX
 
 #ifdef USE_DIRECTX
 #include "directx.cpp"
@@ -144,11 +144,16 @@ int main(int argc, char** argv)
     bool isRunning = true;
     
     const float pi = 3.14159265f;
+#ifdef USE_DIRECTX
     Matrix projection = ProjectionMatrix(0.1f, 1000.f, float(windowHeight) / windowWidth, pi * 0.5f);
+#else
+    Matrix projection = OpenGLProjectionMatrix(0.1f, 1000.f, float(windowWidth) / windowHeight, pi * 0.5f);
+#endif
+    
     Matrix view = IdentityMatrix();
     Matrix invertedView;
 
-    SetTranslation(view, {0.f, 20.f, -50.f});
+    SetTranslation(view, {30.f, 15.f, -35.f});
     view = view * RotationMatrixX(pi * 0.25f);
     
     DE_Timer frameTimer = GetTimer();

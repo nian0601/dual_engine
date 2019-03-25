@@ -183,6 +183,7 @@ Matrix ScaleMatrix(const Vector3f& aScale)
     return result;
 }
 
+// aAspectRatio should be height over width
 Matrix ProjectionMatrix(float aNearZ, float aFarZ, float aAspectRatio, float aFovAngle)
 {
 	float SinFov = sin(0.5f * aFovAngle);
@@ -200,6 +201,23 @@ Matrix ProjectionMatrix(float aNearZ, float aFarZ, float aAspectRatio, float aFo
 	result.myData[15] = 0.0f;
 	return result;
 }
+
+
+// aAspectRatio should be width over height
+Matrix OpenGLProjectionMatrix(float aNearZ, float aFarZ, float aAspectRatio, float aFovAngle)
+{
+	float tanHalfFovy = tan(aFovAngle / 2.f);
+    
+    Matrix result = {};
+    result.myData[0] = 1.f / (aAspectRatio * tanHalfFovy);
+    result.myData[5] = 1.f / tanHalfFovy;
+    result.myData[10] = (aFarZ + aNearZ) / (aFarZ - aNearZ);
+    result.myData[11] = 1.f;
+    result.myData[14] = -(2.f * aFarZ * aNearZ) / (aFarZ - aNearZ);
+    
+    return result;
+}
+
 
 Matrix OrthagonalMatrix(float aWidth, float aHeight, float aNearZ, float aFarZ)
 {

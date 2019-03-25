@@ -369,7 +369,7 @@ void gfx_SetView(const Matrix& aView)
 void gfx_CommitConstantData()
 {
     int projectionLocation = glGetUniformLocation(ourOpenGLContext.myActiveShader, "Projection");
-    glUniformMatrix4fv(projectionLocation, 1, GL_TRUE, ourOpenGLContext.myProjection.myData);
+    glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, ourOpenGLContext.myProjection.myData);
     
     int viewLocation = glGetUniformLocation(ourOpenGLContext.myActiveShader, "View");
     glUniformMatrix4fv(viewLocation, 1, GL_FALSE, ourOpenGLContext.myView.myData);
@@ -397,6 +397,18 @@ void gfx_DrawCube(const Matrix& aTransform)
 {
     int worldLocation = glGetUniformLocation(ourOpenGLContext.myActiveShader, "World");
     glUniformMatrix4fv(worldLocation, 1, GL_FALSE, aTransform.myData);
+    
+    glBindVertexArray(ourOpenGLContext.myCube.myVertexArrayObject);
+    glDrawElements(GL_TRIANGLES, 32, GL_UNSIGNED_INT, 0);
+}
+
+void gfx_DrawColoredCube(const Matrix& aTransform, const Vector4f& aColor)
+{
+    int worldLocation = glGetUniformLocation(ourOpenGLContext.myActiveShader, "World");
+    glUniformMatrix4fv(worldLocation, 1, GL_FALSE, aTransform.myData);
+    
+    int colorAndMetalness = glGetUniformLocation(ourOpenGLContext.myActiveShader, "ColorAndMetalnessIn");
+    glUniform4f(colorAndMetalness, aColor.x, aColor.y, aColor.z, aColor.w);
     
     glBindVertexArray(ourOpenGLContext.myCube.myVertexArrayObject);
     glDrawElements(GL_TRIANGLES, 32, GL_UNSIGNED_INT, 0);
