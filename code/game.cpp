@@ -12,7 +12,7 @@ void SetupGame()
     ArrayAlloc(ourGameState.myPlayerPath.myPoints, 10);
 }
 
-void UpdateCamera(float aDeltaTime, Matrix& aViewMatrix)
+void UpdateCamera(float aDeltaTime, gfx_camera& aCamera)
 {
     float movement = 5.f;
     if(KeyDown(DEK_LSHIFT))
@@ -20,23 +20,31 @@ void UpdateCamera(float aDeltaTime, Matrix& aViewMatrix)
     
     movement *= aDeltaTime;
     
+    Matrix& viewMatrix = aCamera.myView;
     if(KeyDown(DEK_A))
-        TranslateRight(aViewMatrix, -movement);
+        TranslateRight(viewMatrix, -movement);
     
     if(KeyDown(DEK_D))
-        TranslateRight(aViewMatrix, movement);
+        TranslateRight(viewMatrix, movement);
     
     if(KeyDown(DEK_W))
-        TranslateForward(aViewMatrix, movement);
+        TranslateForward(viewMatrix, movement);
     
     if(KeyDown(DEK_S))
-        TranslateForward(aViewMatrix, -movement);
+        TranslateForward(viewMatrix, -movement);
     
     if(KeyDown(DEK_Q))
-        TranslateUp(aViewMatrix, -movement);
+        TranslateUp(viewMatrix, -movement);
     
     if(KeyDown(DEK_E))
-        TranslateUp(aViewMatrix, movement);
+        TranslateUp(viewMatrix, movement);
+    
+    aCamera.myInvertedView = InverseSimple(aCamera.myView);
+    ourInput.myMouseRay.myStart = Unproject(
+        ourInput.myMousePosition, 0.f, aCamera.myInvertedView, aCamera.myProjection, aCamera.myWindowSize);
+    ourInput.myMouseRay.myEnd = Unproject(
+        ourInput.myMousePosition, 1.f, aCamera.myInvertedView, aCamera.myProjection, aCamera.myWindowSize);
+    
 }
 
 void HighlightEntityUnderMouse()
@@ -104,7 +112,7 @@ void FollowPath(float aDeltaTime)
     }
 }
 
-void UpdateGame(float aDeltaTime)
+void UpdateAndRenderGame(float aDeltaTime)
 {
     HighlightEntityUnderMouse();
     
@@ -117,10 +125,7 @@ void UpdateGame(float aDeltaTime)
     }
     
     FollowPath(aDeltaTime);
-}
 
-void RenderGame()
-{
     RenderMap();
     RenderEntity(ourGameState.myPlayer, {0.79f, 0.89f, 0.83f, 1.f});
 }

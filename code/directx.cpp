@@ -512,6 +512,8 @@ void gfx_Init(HWND aWindowHandle, int aWindowWidth, int aWindowHeight)
     
     DX_CreateShader(ourDirectXContext.myQuadShader, true, "quad.vx", "quad.px");
     DX_CreateShader(ourDirectXContext.myCubeShader, false, "cube.vx", "cube.px");
+    
+    ArrayAlloc(ourDirectXContext.myModels, 12);
 }
 
 void gfx_Shutdown()
@@ -609,22 +611,17 @@ void gfx_BindTexture(unsigned int aTextureID, unsigned int aTextureSlot, const c
 {
     ASSERT(aTextureID < 16);
     
-    ourDirectXContext.myContext->PSSetShaderResources(aTextureSlot, 1, &ourDirectXContext.myTextures[aTextureID].myShaderResource);
+    ourDirectXContext.myContext->PSSetShaderResources(
+        aTextureSlot,
+        1, 
+        &ourDirectXContext.myTextures[aTextureID].myShaderResource);
 }
 
-
-void gfx_SetProjection(const Matrix& aProjection)
+void gfx_CommitConstantData(const gfx_camera& aCamera)
 {
-    ourDirectXContext.my3DConstants.myProjection = aProjection;
-}
-
-void gfx_SetView(const Matrix& aView)
-{
-    ourDirectXContext.my3DConstants.myView = aView;
-}
-
-void gfx_CommitConstantData()
-{
+    ourDirectXContext.my3DConstants.myProjection = aCamera.myProjection;
+    ourDirectXContext.my3DConstants.myView = aCamera.myInvertedView;
+    
     DX_constantBuffer& buffer = ourDirectXContext.myConstantBuffer;
     
     D3D11_MAPPED_SUBRESOURCE resource;
@@ -684,86 +681,61 @@ void gfx_Begin3D()
 
 void gfx_DrawCube(const Matrix& aTransform)
 {
-    ourDirectXContext.myModelConstants.myWorld = aTransform;
-    ourDirectXContext.myModelConstants.myColor = {1.f, 1.f, 1.f, 1.f};
-    
-    DX_renderobject& cube = ourDirectXContext.myCube;
-    DX_constantBuffer& buffer = cube.myConstantBuffer;
-    
-    D3D11_MAPPED_SUBRESOURCE resource;
-    HRESULT result = ourDirectXContext.myContext->Map(
-        buffer.myBuffer,
-        0,
-        D3D11_MAP_WRITE_DISCARD,
-        0,
-        &resource);
-    ASSERT(result == S_OK);
-    
-    memcpy(resource.pData, &ourDirectXContext.myModelConstants, sizeof(ourDirectXContext.myModelConstants));
-    
-    ourDirectXContext.myContext->Unmap(
-        buffer.myBuffer,
-        0);
-    
-    ourDirectXContext.myContext->VSSetConstantBuffers(buffer.myBufferIndex, 1, &buffer.myBuffer);
-    
-    UINT stride = sizeof(DX_cubeVertex);
-    UINT offset = 0;
-    
-    ourDirectXContext.myContext->IASetVertexBuffers(
-        0, 
-        1, 
-        &cube.myVertexBuffer, 
-        &stride, 
-        &offset);
-    
-    ourDirectXContext.myContext->IASetIndexBuffer(
-        cube.myIndexBuffer, 
-        DXGI_FORMAT_R32_UINT, 
-        0);
-    
-    ourDirectXContext.myContext->DrawIndexed(36, 0, 0);
+    ArrayAdd(ourDirectXContext.myModels, {aTransform, {1.f, 1.f, 1.f, 1.f}});
 }
 
 void gfx_DrawColoredCube(const Matrix& aTransform, const Vector4f& aColor)
 {
-    ourDirectXContext.myModelConstants.myWorld = aTransform;
-    ourDirectXContext.myModelConstants.myColor = aColor;
+    ArrayAdd(ourDirectXContext.myModels, {aTransform, aColor});
+}
+
+void gfx_DrawModels()
+{
+    gfx_Begin3D();
     
-    DX_renderobject& cube = ourDirectXContext.myCube;
-    DX_constantBuffer& buffer = cube.myConstantBuffer;
+    for(int i = 0; i < ourDirectXContext.myModels.myCount; ++i)
+    {
+        const DX_modelData& data = ourDirectXContext.myModels[i];
+        ourDirectXContext.myModelConstants.myWorld = data.myMatrix;
+        ourDirectXContext.myModelConstants.myColor = data.myColor;
     
-    D3D11_MAPPED_SUBRESOURCE resource;
-    HRESULT result = ourDirectXContext.myContext->Map(
-        buffer.myBuffer,
-        0,
-        D3D11_MAP_WRITE_DISCARD,
-        0,
-        &resource);
-    ASSERT(result == S_OK);
+        DX_renderobject& cube = ourDirectXContext.myCube;
+        DX_constantBuffer& buffer = cube.myConstantBuffer;
     
-    memcpy(resource.pData, &ourDirectXContext.myModelConstants, sizeof(ourDirectXContext.myModelConstants));
+        D3D11_MAPPED_SUBRESOURCE resource;
+        HRESULT result = ourDirectXContext.myContext->Map(
+            buffer.myBuffer,
+            0,
+            D3D11_MAP_WRITE_DISCARD,
+            0,
+            &resource);
+        ASSERT(result == S_OK);
     
-    ourDirectXContext.myContext->Unmap(
-        buffer.myBuffer,
-        0);
+        memcpy(resource.pData, &ourDirectXContext.myModelConstants, sizeof(ourDirectXContext.myModelConstants));
     
-    ourDirectXContext.myContext->VSSetConstantBuffers(buffer.myBufferIndex, 1, &buffer.myBuffer);
+        ourDirectXContext.myContext->Unmap(
+            buffer.myBuffer,
+            0);
     
-    UINT stride = sizeof(DX_cubeVertex);
-    UINT offset = 0;
+        ourDirectXContext.myContext->VSSetConstantBuffers(buffer.myBufferIndex, 1, &buffer.myBuffer);
     
-    ourDirectXContext.myContext->IASetVertexBuffers(
-        0, 
-        1, 
-        &cube.myVertexBuffer, 
-        &stride, 
-        &offset);
+        UINT stride = sizeof(DX_cubeVertex);
+        UINT offset = 0;
     
-    ourDirectXContext.myContext->IASetIndexBuffer(
-        cube.myIndexBuffer, 
-        DXGI_FORMAT_R32_UINT, 
-        0);
+        ourDirectXContext.myContext->IASetVertexBuffers(
+            0, 
+            1, 
+            &cube.myVertexBuffer, 
+            &stride, 
+            &offset);
     
-    ourDirectXContext.myContext->DrawIndexed(36, 0, 0);
+        ourDirectXContext.myContext->IASetIndexBuffer(
+            cube.myIndexBuffer, 
+            DXGI_FORMAT_R32_UINT, 
+            0);
+    
+        ourDirectXContext.myContext->DrawIndexed(36, 0, 0);
+    }
+    
+    ArrayClear(ourDirectXContext.myModels);
 }

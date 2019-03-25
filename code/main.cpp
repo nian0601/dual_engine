@@ -24,7 +24,7 @@
 #include "mapgenerator.cpp"
 #include "game.cpp"
 
-//#define USE_DIRECTX
+#define USE_DIRECTX
 
 #ifdef USE_DIRECTX
 #include "directx.cpp"
@@ -144,17 +144,21 @@ int main(int argc, char** argv)
     bool isRunning = true;
     
     const float pi = 3.14159265f;
+    
+    gfx_camera myCamera;
+    myCamera.myWindowSize.x = windowWidth;
+    myCamera.myWindowSize.y = windowHeight;
 #ifdef USE_DIRECTX
-    Matrix projection = ProjectionMatrix(0.1f, 1000.f, float(windowHeight) / windowWidth, pi * 0.5f);
+    myCamera.myProjection = ProjectionMatrix(0.1f, 1000.f, float(windowHeight) / windowWidth, pi * 0.5f);
 #else
-    Matrix projection = OpenGLProjectionMatrix(0.1f, 1000.f, float(windowWidth) / windowHeight, pi * 0.5f);
+    myCamera.myProjection = OpenGLProjectionMatrix(0.1f, 1000.f, float(windowWidth) / windowHeight, pi * 0.5f);
 #endif
     
-    Matrix view = IdentityMatrix();
-    Matrix invertedView;
+    myCamera.myView = IdentityMatrix();
+    myCamera.myInvertedView;
 
-    SetTranslation(view, {30.f, 15.f, -35.f});
-    view = view * RotationMatrixX(pi * 0.25f);
+    SetTranslation(myCamera.myView, {30.f, 15.f, -35.f});
+    myCamera.myView = myCamera.myView * RotationMatrixX(pi * 0.25f);
     
     DE_Timer frameTimer = GetTimer();
 
@@ -180,27 +184,16 @@ int main(int argc, char** argv)
             isRunning = false;
         
         
-        UpdateCamera(deltaTime, view);
-        
-        invertedView = InverseSimple(view);
-        ourInput.myMouseRay.myStart = Unproject(
-            ourInput.myMousePosition, 0.f, invertedView, projection, windowSize);
-        ourInput.myMouseRay.myEnd = Unproject(
-            ourInput.myMousePosition, 1.f, invertedView, projection, windowSize);
-        
-        UpdateGame(deltaTime);
+        UpdateCamera(deltaTime, myCamera);        
+        UpdateAndRenderGame(deltaTime);
         
         
         gfx_Clear();
+        gfx_CommitConstantData(myCamera);
         
 #if 1
         
-        gfx_Begin3D();
-        gfx_SetProjection(projection);
-        gfx_SetView(invertedView);
-        gfx_CommitConstantData();
-        
-        RenderGame();
+        gfx_DrawModels();
         
 #else
         

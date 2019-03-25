@@ -1,3 +1,9 @@
+struct DX_modelData
+{
+    Matrix myMatrix;
+    Vector4f myColor;
+};
+
 struct DX_quadVertex
 {
     Vector3f pos;
@@ -78,4 +84,6 @@ struct DX_context
     ID3D11SamplerState* mySamplerState;
     ID3D11RasterizerState* myRasterizerState;
     ID3D11DepthStencilState* myDepthState;
+    
+    GrowingArray<DX_modelData> myModels;
 };

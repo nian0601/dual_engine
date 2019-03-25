@@ -1,24 +1,29 @@
 #define GL_LITE_IMPLEMENTATION
 #include "gl_lite.h"
 
+struct OpenGL_modelData
+{
+    Matrix myMatrix;
+    Vector4f myColor;
+};
 
-struct opengl_cubeVertex
+struct OpenGL_cubeVertex
 {
     Vector4f pos;
     Vector4f norm;
 };
 
-struct opengl_renderobject
+struct OpenGL_renderobject
 {  
     unsigned int myVertexArrayObject;
     unsigned int myVertexBufferObject;
     unsigned int myElementBufferObject;
 };
 
-struct opengl_context
+struct OpenGL_context
 {
-    opengl_renderobject myQuad;
-    opengl_renderobject myCube;
+    OpenGL_renderobject myQuad;
+    OpenGL_renderobject myCube;
     
     Matrix myView;
     Matrix myProjection;
@@ -26,11 +31,13 @@ struct opengl_context
     
     unsigned int myQuadShader;
     unsigned int myCubeShader;
+    
+    GrowingArray<OpenGL_modelData> myModels;
 };
 
-static opengl_context ourOpenGLContext;
+static OpenGL_context ourOpenGL_Context;
 
-void openglVerifyShader(unsigned int aShaderID)
+void OpenGL_VerifyShader(unsigned int aShaderID)
 {
     int success = 0;
     glGetShaderiv(aShaderID, GL_COMPILE_STATUS, &success);
@@ -42,7 +49,7 @@ void openglVerifyShader(unsigned int aShaderID)
     }
 }
 
-void openglVerifyShaderProgram(unsigned int aShaderProgramID)
+void OpenGL_VerifyShaderProgram(unsigned int aShaderProgramID)
 {
     int success = 0;
     glGetProgramiv(aShaderProgramID, GL_LINK_STATUS, &success);
@@ -54,7 +61,7 @@ void openglVerifyShaderProgram(unsigned int aShaderProgramID)
     }
 }
 
-unsigned int openglCreateShader(const char* aVertexName, const char* aPixelName)
+unsigned int OpenGL_CreateShader(const char* aVertexName, const char* aPixelName)
 {
     char fullPath[100];
     
@@ -64,7 +71,7 @@ unsigned int openglCreateShader(const char* aVertexName, const char* aPixelName)
     unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertexShader, 1, &vertexData, NULL);
     glCompileShader(vertexShader);
-    openglVerifyShader(vertexShader);
+    OpenGL_VerifyShader(vertexShader);
     free((void*)vertexData);
     
     // Compile our FragmentShader
@@ -73,7 +80,7 @@ unsigned int openglCreateShader(const char* aVertexName, const char* aPixelName)
     unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
     glShaderSource(fragmentShader, 1, &pixelData, NULL);
     glCompileShader(fragmentShader);
-    openglVerifyShader(fragmentShader);
+    OpenGL_VerifyShader(fragmentShader);
     free((void*)pixelData);
     
     // Link our Vertex and Fragment Shaders
@@ -81,7 +88,7 @@ unsigned int openglCreateShader(const char* aVertexName, const char* aPixelName)
     glAttachShader(shaderProgram, vertexShader);
     glAttachShader(shaderProgram, fragmentShader);
     glLinkProgram(shaderProgram);
-    openglVerifyShaderProgram(shaderProgram);
+    OpenGL_VerifyShaderProgram(shaderProgram);
 
     // After we have linked the shaders, we dont need the objects anymore
     glDeleteShader(vertexShader);
@@ -91,7 +98,7 @@ unsigned int openglCreateShader(const char* aVertexName, const char* aPixelName)
 }
 
 
-void openglCreateCube()
+void OpenGL_CreateCube()
 {
     // Create our Vertices
     float width = 0.5f;
@@ -107,7 +114,7 @@ void openglCreateCube()
     Vector4f forward = {0.f, 0.f, 1.f, 0.f};
     Vector4f back = {0.f, 0.f, -1.f, 0.f};
     
-    opengl_cubeVertex vertices[24];
+    OpenGL_cubeVertex vertices[24];
     //0 - 3 (Top)
 	vertices[0] = { -width, height, -depth, 1.f, up };
 	vertices[1] = { width, height, -depth, 1.f, up };
@@ -199,7 +206,7 @@ void openglCreateCube()
 	indices[34] = 20;
 
  
-    opengl_renderobject cube = {};
+    OpenGL_renderobject cube = {};
     
     glGenVertexArrays(1, &cube.myVertexArrayObject);
     glBindVertexArray(cube.myVertexArrayObject);
@@ -223,12 +230,12 @@ void openglCreateCube()
     glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(4 * sizeof(float)));
     glEnableVertexAttribArray(1);
     
-    ourOpenGLContext.myCube = cube;
+    ourOpenGL_Context.myCube = cube;
 }
 
-void openglCreateQuad()
+void OpenGL_CreateQuad()
 {
-    opengl_renderobject quad = {};
+    OpenGL_renderobject quad = {};
     
     glGenVertexArrays(1, &quad.myVertexArrayObject);
     glBindVertexArray(quad.myVertexArrayObject);
@@ -270,7 +277,7 @@ void openglCreateQuad()
     glEnableVertexAttribArray(2);    
     
     
-    ourOpenGLContext.myQuad = quad;
+    ourOpenGL_Context.myQuad = quad;
 }
 
 // gfx_interface-implementation
@@ -301,11 +308,13 @@ void gfx_Init(HWND aWindowHandle, int aWindowHeight, int aWindowWidth)
     ASSERT(result == true);
     
     glEnable(GL_DEPTH_TEST);
-    openglCreateQuad();
-    openglCreateCube();
+    OpenGL_CreateQuad();
+    OpenGL_CreateCube();
     
-    ourOpenGLContext.myQuadShader = openglCreateShader("quad.vx", "quad.px");
-    ourOpenGLContext.myCubeShader = openglCreateShader("cube.vx", "cube.px");
+    ourOpenGL_Context.myQuadShader = OpenGL_CreateShader("quad.vx", "quad.px");
+    ourOpenGL_Context.myCubeShader = OpenGL_CreateShader("cube.vx", "cube.px");
+    
+    ArrayAlloc(ourOpenGL_Context.myModels, 12);
 }
 
 void gfx_Shutdown()
@@ -350,66 +359,70 @@ unsigned int gfx_CreateTexture(int aWidth, int aHeight, bool aUseAlpha, void* so
 
 void gfx_BindTexture(unsigned int aTextureID, unsigned int aTextureSlot, const char* aShaderTextureName)
 {
-    glUniform1i(glGetUniformLocation(ourOpenGLContext.myActiveShader, aShaderTextureName), aTextureSlot);
+    glUniform1i(glGetUniformLocation(ourOpenGL_Context.myActiveShader, aShaderTextureName), aTextureSlot);
     
     glActiveTexture(GL_TEXTURE0 + aTextureSlot);
     glBindTexture(GL_TEXTURE_2D, aTextureID);
 }
 
-void gfx_SetProjection(const Matrix& aProjection)
+void gfx_CommitConstantData(const gfx_camera& aCamera)
 {
-    ourOpenGLContext.myProjection = aProjection;
-}
-
-void gfx_SetView(const Matrix& aView)
-{
-    ourOpenGLContext.myView = aView;
-}
-
-void gfx_CommitConstantData()
-{
-    int projectionLocation = glGetUniformLocation(ourOpenGLContext.myActiveShader, "Projection");
-    glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, ourOpenGLContext.myProjection.myData);
+    ourOpenGL_Context.myProjection = aCamera.myProjection;
+    ourOpenGL_Context.myView = aCamera.myInvertedView;
     
-    int viewLocation = glGetUniformLocation(ourOpenGLContext.myActiveShader, "View");
-    glUniformMatrix4fv(viewLocation, 1, GL_FALSE, ourOpenGLContext.myView.myData);
+    int projectionLocation = glGetUniformLocation(ourOpenGL_Context.myActiveShader, "Projection");
+    glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, ourOpenGL_Context.myProjection.myData);
+    
+    int viewLocation = glGetUniformLocation(ourOpenGL_Context.myActiveShader, "View");
+    glUniformMatrix4fv(viewLocation, 1, GL_FALSE, ourOpenGL_Context.myView.myData);
 }
 
 void gfx_Begin2D()
 {
-    glUseProgram(ourOpenGLContext.myQuadShader);
-    ourOpenGLContext.myActiveShader = ourOpenGLContext.myQuadShader;
+    glUseProgram(ourOpenGL_Context.myQuadShader);
+    ourOpenGL_Context.myActiveShader = ourOpenGL_Context.myQuadShader;
 }
 
 void gfx_DrawQuad()
 {
-    glBindVertexArray(ourOpenGLContext.myQuad.myVertexArrayObject);
+    glBindVertexArray(ourOpenGL_Context.myQuad.myVertexArrayObject);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 }
 
 void gfx_Begin3D()
 {
-    glUseProgram(ourOpenGLContext.myCubeShader);
-    ourOpenGLContext.myActiveShader = ourOpenGLContext.myCubeShader;
+    glUseProgram(ourOpenGL_Context.myCubeShader);
+    ourOpenGL_Context.myActiveShader = ourOpenGL_Context.myCubeShader;
 }
 
 void gfx_DrawCube(const Matrix& aTransform)
-{
-    int worldLocation = glGetUniformLocation(ourOpenGLContext.myActiveShader, "World");
-    glUniformMatrix4fv(worldLocation, 1, GL_FALSE, aTransform.myData);
-    
-    glBindVertexArray(ourOpenGLContext.myCube.myVertexArrayObject);
-    glDrawElements(GL_TRIANGLES, 32, GL_UNSIGNED_INT, 0);
+{   
+    ArrayAdd(ourOpenGL_Context.myModels, {aTransform, 1.f, 1.f, 1.f, 1.f});
 }
 
 void gfx_DrawColoredCube(const Matrix& aTransform, const Vector4f& aColor)
+{    
+    ArrayAdd(ourOpenGL_Context.myModels, {aTransform, aColor});
+}
+
+void gfx_DrawModels()
 {
-    int worldLocation = glGetUniformLocation(ourOpenGLContext.myActiveShader, "World");
-    glUniformMatrix4fv(worldLocation, 1, GL_FALSE, aTransform.myData);
+    glUseProgram(ourOpenGL_Context.myCubeShader);
+    ourOpenGL_Context.myActiveShader = ourOpenGL_Context.myCubeShader;
     
-    int colorAndMetalness = glGetUniformLocation(ourOpenGLContext.myActiveShader, "ColorAndMetalnessIn");
-    glUniform4f(colorAndMetalness, aColor.x, aColor.y, aColor.z, aColor.w);
+    for(int i = 0; i < ourOpenGL_Context.myModels.myCount; ++i)
+    {
+        const OpenGL_modelData& data = ourOpenGL_Context.myModels[i];
+        
+        int worldLocation = glGetUniformLocation(ourOpenGL_Context.myActiveShader, "World");
+        glUniformMatrix4fv(worldLocation, 1, GL_FALSE, data.myMatrix.myData);
+        
+        int colorAndMetalness = glGetUniformLocation(ourOpenGL_Context.myActiveShader, "ColorAndMetalnessIn");
+        glUniform4f(colorAndMetalness, data.myColor.x, data.myColor.y, data.myColor.z, data.myColor.w);
+        
+        glBindVertexArray(ourOpenGL_Context.myCube.myVertexArrayObject);
+        glDrawElements(GL_TRIANGLES, 32, GL_UNSIGNED_INT, 0);    
+    }
     
-    glBindVertexArray(ourOpenGLContext.myCube.myVertexArrayObject);
-    glDrawElements(GL_TRIANGLES, 32, GL_UNSIGNED_INT, 0);
+    ArrayClear(ourOpenGL_Context.myModels);
 }
