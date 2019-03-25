@@ -24,7 +24,7 @@
 #include "mapgenerator.cpp"
 #include "game.cpp"
 
-#define USE_DIRECTX
+//#define USE_DIRECTX
 
 #ifdef USE_DIRECTX
 #include "directx.cpp"
@@ -126,7 +126,11 @@ HWND Win32CreateWindow(const char* aTitle, int aWindowWidth, int aWindowHeight)
 
 int main(int argc, char** argv)
 {
-    const char* windowTitle = "Dual Engine";
+    #ifdef USE_DIRECTX
+    const char* windowTitle = "Dual Engine (DirectX)";
+    #else
+    const char* windowTitle = "Dual Engine (OpenGL)";
+    #endif
     
     const int windowWidth = 1280;
     const int windowHeight = 720;
@@ -148,14 +152,9 @@ int main(int argc, char** argv)
     gfx_camera myCamera;
     myCamera.myWindowSize.x = windowWidth;
     myCamera.myWindowSize.y = windowHeight;
-#ifdef USE_DIRECTX
     myCamera.myProjection = ProjectionMatrix(0.1f, 1000.f, float(windowHeight) / windowWidth, pi * 0.5f);
-#else
-    myCamera.myProjection = OpenGLProjectionMatrix(0.1f, 1000.f, float(windowWidth) / windowHeight, pi * 0.5f);
-#endif
-    
     myCamera.myView = IdentityMatrix();
-    myCamera.myInvertedView;
+    myCamera.myInvertedView = IdentityMatrix();
 
     SetTranslation(myCamera.myView, {30.f, 15.f, -35.f});
     myCamera.myView = myCamera.myView * RotationMatrixX(pi * 0.25f);
