@@ -4,12 +4,25 @@ layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aColor;
 layout (location = 2) in vec2 aTexCoord;
 
-out vec3 vertexColor;
 out vec2 texCoord;
+
+uniform vec2 Position;
+uniform vec2 Size;
 
 void main()
 {
    gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
-   vertexColor = aColor;
+
+   gl_Position.x *= Size.x;
+   gl_Position.y *= Size.y;
+
+   gl_Position.x += Position.x;
+   gl_Position.y -= Position.y;
+
+   gl_Position.x -= 1;
+   gl_Position.x += Size.x * 0.5f;
+   gl_Position.y += 1;
+   gl_Position.y -= Size.y * 0.5f;
+
    texCoord = aTexCoord;
 };

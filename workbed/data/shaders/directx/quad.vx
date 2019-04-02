@@ -1,3 +1,9 @@
+cbuffer ObjectData
+{
+	float2 Position;
+	float2 Size;
+};
+
 struct VS_OUTPUT
 {
     float4 Pos : SV_POSITION;
@@ -7,7 +13,18 @@ struct VS_OUTPUT
 VS_OUTPUT VS(float4 inPos : POSITION, float2 inTex : TEXCOORD)
 {
     VS_OUTPUT output;
+
     output.Pos = inPos;
+
+    output.Pos.xy *= Size;
+    output.Pos.x += Position.x;
+    output.Pos.y -= Position.y;
+
+    output.Pos.x -= 1.f;
+    output.Pos.x += Size.x * 0.5f;
+    output.Pos.y += 1.f;
+    output.Pos.y -= Size.y * 0.5f;
+
     output.Tex = inTex;
     return output;
 }

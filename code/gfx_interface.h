@@ -4,6 +4,7 @@ struct gfx_camera
     Matrix myView;
     Matrix myInvertedView;
     Vector2f myWindowSize;
+    Vector2f myScreenSize;
 };
 
 
@@ -15,14 +16,13 @@ void gfx_Clear();
 void gfx_FinishFrame();
 
 unsigned int gfx_CreateTexture(int aWidth, int aHeight, bool aUseAlpha, void* someTextureData);
-void gfx_BindTexture(unsigned int aTextureID, unsigned int aTextureSlot, const char* aShaderTextureName);
 
-void gfx_CommitConstantData(const gfx_camera& aCamera);
+void gfx_SetCamera(gfx_camera* aCamera);
 
-void gfx_Begin2D();
-void gfx_DrawQuad();
+void gfx_DrawQuad(unsigned int aTextureID, float aX1, float aY1, float aX2, float aY2);
 
-void gfx_Begin3D();
+void gfx_DrawQuads();
+
 void gfx_DrawCube(const Matrix& aTransform);
 void gfx_DrawColoredCube(const Matrix& aTransform, const Vector4f& aColor);
 

@@ -7,6 +7,13 @@ struct OpenGL_modelData
     Vector4f myColor;
 };
 
+struct OpenGL_quadData
+{
+    Vector2f myPosition;
+    Vector2f mySize;
+    unsigned int myTextureID;
+};
+
 struct OpenGL_cubeVertex
 {
     Vector4f pos;
@@ -25,14 +32,14 @@ struct OpenGL_context
     OpenGL_renderobject myQuad;
     OpenGL_renderobject myCube;
     
-    Matrix myView;
-    Matrix myProjection;
+    gfx_camera* myCamera;
     unsigned int myActiveShader;
     
     unsigned int myQuadShader;
     unsigned int myCubeShader;
     
-    GrowingArray<OpenGL_modelData> myModels;
+    GrowingArray<OpenGL_modelData> myModelList;
+    GrowingArray<OpenGL_quadData> myQuadList;
 };
 
 static OpenGL_context ourOpenGL_Context;
@@ -276,12 +283,10 @@ void OpenGL_CreateQuad()
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
     glEnableVertexAttribArray(2);    
     
-    
     ourOpenGL_Context.myQuad = quad;
 }
 
 // gfx_interface-implementation
-
 void gfx_Init(HWND aWindowHandle, int aWindowHeight, int aWindowWidth)
 {
     HDC windowDC = GetDC(aWindowHandle);
@@ -314,7 +319,9 @@ void gfx_Init(HWND aWindowHandle, int aWindowHeight, int aWindowWidth)
     ourOpenGL_Context.myQuadShader = OpenGL_CreateShader("quad.vx", "quad.px");
     ourOpenGL_Context.myCubeShader = OpenGL_CreateShader("cube.vx", "cube.px");
     
-    ArrayAlloc(ourOpenGL_Context.myModels, 12);
+    ArrayAlloc(ourOpenGL_Context.myModelList, 12);
+    ArrayAlloc(ourOpenGL_Context.myQuadList, 12);
+    ourOpenGL_Context.myCamera = NULL;
 }
 
 void gfx_Shutdown()
@@ -357,62 +364,82 @@ unsigned int gfx_CreateTexture(int aWidth, int aHeight, bool aUseAlpha, void* so
     return texture;
 }
 
-void gfx_BindTexture(unsigned int aTextureID, unsigned int aTextureSlot, const char* aShaderTextureName)
+void gfx_SetCamera(gfx_camera* aCamera)
 {
-    glUniform1i(glGetUniformLocation(ourOpenGL_Context.myActiveShader, aShaderTextureName), aTextureSlot);
-    
-    glActiveTexture(GL_TEXTURE0 + aTextureSlot);
-    glBindTexture(GL_TEXTURE_2D, aTextureID);
+    ourOpenGL_Context.myCamera = aCamera;
 }
 
-void gfx_CommitConstantData(const gfx_camera& aCamera)
+void gfx_DrawQuad(unsigned int aTextureID, float aX1, float aY1, float aX2, float aY2)
 {
-    ourOpenGL_Context.myProjection = aCamera.myProjection;
-    ourOpenGL_Context.myView = aCamera.myInvertedView;
+    ASSERT(ourOpenGL_Context.myCamera != NULL);
     
-    int projectionLocation = glGetUniformLocation(ourOpenGL_Context.myActiveShader, "Projection");
-    glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, ourOpenGL_Context.myProjection.myData);
+    Vector2f& screenSize = ourOpenGL_Context.myCamera->myScreenSize;
     
-    int viewLocation = glGetUniformLocation(ourOpenGL_Context.myActiveShader, "View");
-    glUniformMatrix4fv(viewLocation, 1, GL_FALSE, ourOpenGL_Context.myView.myData);
+    float normalizedX1 = aX1 / screenSize.x;
+    float normalizedY1 = aY1 / screenSize.y;
+    float normalizedX2 = aX2 / screenSize.x;
+    float normalizedY2 = aY2 / screenSize.y;
+    
+    Vector2f position = {normalizedX1, normalizedY1};
+    Vector2f size = {normalizedX2 - normalizedX1, normalizedY2 - normalizedY1};
+    
+    ArrayAdd(ourOpenGL_Context.myQuadList, {position, size, aTextureID});
 }
 
-void gfx_Begin2D()
+void gfx_DrawQuads()
 {
     glUseProgram(ourOpenGL_Context.myQuadShader);
     ourOpenGL_Context.myActiveShader = ourOpenGL_Context.myQuadShader;
-}
+  
+    int positionLocation = glGetUniformLocation(ourOpenGL_Context.myActiveShader, "Position");
+    int sizeLocation = glGetUniformLocation(ourOpenGL_Context.myActiveShader, "Size");
+    int textureLocation = glGetUniformLocation(ourOpenGL_Context.myActiveShader, "AlbedoTexture");
+    
+    glUniform1i(textureLocation, 0);
+    glActiveTexture(GL_TEXTURE0);
+    
+    for(int i = 0; i < ourOpenGL_Context.myQuadList.myCount; ++i)
+    {
+        OpenGL_quadData& data = ourOpenGL_Context.myQuadList[i];
+        
+        glBindTexture(GL_TEXTURE_2D, data.myTextureID);
+        glUniform2f(positionLocation, data.myPosition.x, data.myPosition.y);
+        glUniform2f(sizeLocation, data.mySize.x, data.mySize.y);
 
-void gfx_DrawQuad()
-{
-    glBindVertexArray(ourOpenGL_Context.myQuad.myVertexArrayObject);
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-}
-
-void gfx_Begin3D()
-{
-    glUseProgram(ourOpenGL_Context.myCubeShader);
-    ourOpenGL_Context.myActiveShader = ourOpenGL_Context.myCubeShader;
+        glBindVertexArray(ourOpenGL_Context.myQuad.myVertexArrayObject);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    }
+    
+    ArrayClear(ourOpenGL_Context.myQuadList);
 }
 
 void gfx_DrawCube(const Matrix& aTransform)
 {   
-    ArrayAdd(ourOpenGL_Context.myModels, {aTransform, 1.f, 1.f, 1.f, 1.f});
+    ArrayAdd(ourOpenGL_Context.myModelList, {aTransform, 1.f, 1.f, 1.f, 1.f});
 }
 
 void gfx_DrawColoredCube(const Matrix& aTransform, const Vector4f& aColor)
 {    
-    ArrayAdd(ourOpenGL_Context.myModels, {aTransform, aColor});
+    ArrayAdd(ourOpenGL_Context.myModelList, {aTransform, aColor});
 }
 
 void gfx_DrawModels()
 {
+    ASSERT(ourOpenGL_Context.myCamera != NULL);
+    gfx_camera& camera = *ourOpenGL_Context.myCamera;
+    
+    int projectionLocation = glGetUniformLocation(ourOpenGL_Context.myActiveShader, "Projection");
+    glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, camera.myProjection.myData);
+    
+    int viewLocation = glGetUniformLocation(ourOpenGL_Context.myActiveShader, "View");
+    glUniformMatrix4fv(viewLocation, 1, GL_FALSE, camera.myInvertedView.myData);
+    
     glUseProgram(ourOpenGL_Context.myCubeShader);
     ourOpenGL_Context.myActiveShader = ourOpenGL_Context.myCubeShader;
     
-    for(int i = 0; i < ourOpenGL_Context.myModels.myCount; ++i)
+    for(int i = 0; i < ourOpenGL_Context.myModelList.myCount; ++i)
     {
-        const OpenGL_modelData& data = ourOpenGL_Context.myModels[i];
+        const OpenGL_modelData& data = ourOpenGL_Context.myModelList[i];
         
         int worldLocation = glGetUniformLocation(ourOpenGL_Context.myActiveShader, "World");
         glUniformMatrix4fv(worldLocation, 1, GL_FALSE, data.myMatrix.myData);
@@ -424,5 +451,5 @@ void gfx_DrawModels()
         glDrawElements(GL_TRIANGLES, 32, GL_UNSIGNED_INT, 0);    
     }
     
-    ArrayClear(ourOpenGL_Context.myModels);
+    ArrayClear(ourOpenGL_Context.myModelList);
 }

@@ -144,13 +144,13 @@ void DX_CreateQuad()
         {-0.5f, -0.5f, 0.0f, 0.f, 1.f},
         
         // Bottomright
-        {0.5f, -0.5f, 0.5f, 1.f, 1.f},
+        {0.5f, -0.5f, 0.0f, 1.f, 1.f},
 
         // Top Left
-        { -0.5f, 0.5f, 0.5f, 0.f, 0.f},
+        { -0.5f, 0.5f, 0.0f, 0.f, 0.f},
         
         // Top Right
-        { 0.5f,  0.5f, 0.5f, 1.f, 0.f},
+        { 0.5f,  0.5f, 0.0f, 1.f, 0.f},
     };
     
     D3D11_BUFFER_DESC vertexDesc = {};
@@ -189,7 +189,9 @@ void DX_CreateQuad()
         &quad.myIndexBuffer);
     ASSERT(result == S_OK);
 
-    quad.myConstantBuffer = {};
+    quad.myConstantBuffer.myBufferSize = sizeof(DX_quadData) - sizeof(unsigned int);
+    quad.myConstantBuffer.myBufferIndex = 0;
+    DX_CreateConstantBuffer(quad.myConstantBuffer);
 }
 
 void DX_CreateCube()
@@ -330,7 +332,7 @@ void DX_CreateCube()
         &cube.myIndexBuffer);
     ASSERT(result == S_OK);
     
-    cube.myConstantBuffer.myBufferSize = sizeof(ourDirectXContext.myModelConstants);
+    cube.myConstantBuffer.myBufferSize = sizeof(DX_modelData);
     cube.myConstantBuffer.myBufferIndex = 1;
     DX_CreateConstantBuffer(cube.myConstantBuffer);
 }
@@ -488,6 +490,28 @@ void DX_CreateDepthBuffer(int aWidth, int aHeight)
     ASSERT(result == S_OK);
 }
  
+void DX_UpdateAndSetConstantBuffer(DX_constantBuffer& aBuffer, void* someData, unsigned int aDataSize)
+{
+    ASSERT(aDataSize == aBuffer.myBufferSize);
+    
+    D3D11_MAPPED_SUBRESOURCE resource;
+    HRESULT result = ourDirectXContext.myContext->Map(
+        aBuffer.myBuffer,
+        0,
+        D3D11_MAP_WRITE_DISCARD,
+        0,
+        &resource);
+    ASSERT(result == S_OK);
+    
+    memcpy(resource.pData, someData, aBuffer.myBufferSize);
+    
+    ourDirectXContext.myContext->Unmap(
+        aBuffer.myBuffer,
+        0);
+    
+    ourDirectXContext.myContext->VSSetConstantBuffers(aBuffer.myBufferIndex, 1, &aBuffer.myBuffer);
+}
+
 void gfx_Init(HWND aWindowHandle, int aWindowWidth, int aWindowHeight)
 {
     ourDirectXContext.myNextTextureID = 0;
@@ -513,7 +537,10 @@ void gfx_Init(HWND aWindowHandle, int aWindowWidth, int aWindowHeight)
     DX_CreateShader(ourDirectXContext.myQuadShader, true, "quad.vx", "quad.px");
     DX_CreateShader(ourDirectXContext.myCubeShader, false, "cube.vx", "cube.px");
     
-    ArrayAlloc(ourDirectXContext.myModels, 12);
+    ArrayAlloc(ourDirectXContext.myModelList, 12);
+    ArrayAlloc(ourDirectXContext.myQuadList, 12);
+    
+    ourDirectXContext.myCamera = NULL;
 }
 
 void gfx_Shutdown()
@@ -607,52 +634,37 @@ unsigned int gfx_CreateTexture(int aWidth, int aHeight, bool aUseAlpha, void* so
     return ourDirectXContext.myNextTextureID++;
 }
 
-void gfx_BindTexture(unsigned int aTextureID, unsigned int aTextureSlot, const char* aShaderTextureName)
+void gfx_SetCamera(gfx_camera* aCamera)
 {
+    ourDirectXContext.myCamera = aCamera;
+}
+
+void gfx_DrawQuad(unsigned int aTextureID, float aX1, float aY1, float aX2, float aY2)
+{
+    ASSERT(ourDirectXContext.myCamera != NULL);
     ASSERT(aTextureID < 16);
     
-    ourDirectXContext.myContext->PSSetShaderResources(
-        aTextureSlot,
-        1, 
-        &ourDirectXContext.myTextures[aTextureID].myShaderResource);
+    Vector2f& screenSize = ourDirectXContext.myCamera->myScreenSize;
+    
+    float normalizedX1 = aX1 / screenSize.x;
+    float normalizedY1 = aY1 / screenSize.y;
+    float normalizedX2 = aX2 / screenSize.x;
+    float normalizedY2 = aY2 / screenSize.y;
+    
+    Vector2f position = {normalizedX1, normalizedY1};
+    Vector2f size = {normalizedX2 - normalizedX1, normalizedY2 - normalizedY1};
+    
+    ArrayAdd(ourDirectXContext.myQuadList, {position, size, aTextureID});
 }
 
-void gfx_CommitConstantData(const gfx_camera& aCamera)
-{
-    ourDirectXContext.my3DConstants.myProjection = aCamera.myProjection;
-    ourDirectXContext.my3DConstants.myView = aCamera.myInvertedView;
-    
-    DX_constantBuffer& buffer = ourDirectXContext.myConstantBuffer;
-    
-    D3D11_MAPPED_SUBRESOURCE resource;
-    HRESULT result = ourDirectXContext.myContext->Map(
-        buffer.myBuffer,
-        0,
-        D3D11_MAP_WRITE_DISCARD,
-        0,
-        &resource);
-    ASSERT(result == S_OK);
-    
-    memcpy(resource.pData, &ourDirectXContext.my3DConstants, sizeof(ourDirectXContext.my3DConstants));
-    
-    ourDirectXContext.myContext->Unmap(
-        buffer.myBuffer,
-        0);
-    
-    ourDirectXContext.myContext->VSSetConstantBuffers(buffer.myBufferIndex, 1, &buffer.myBuffer);
-}
-
-
-void gfx_Begin2D()
-{
+void DX_prepare2D()
+{   
     ourDirectXContext.myContext->VSSetShader(ourDirectXContext.myQuadShader.myVertexShader, 0, 0);
     ourDirectXContext.myContext->PSSetShader(ourDirectXContext.myQuadShader.myPixelShader, 0, 0);
     ourDirectXContext.myContext->IASetInputLayout(ourDirectXContext.myQuadShader.myInputLayout);
     ourDirectXContext.myContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-}
-
-void gfx_DrawQuad()
-{
+    
+    
     UINT stride = sizeof(DX_quadVertex);
     UINT offset = 0;
     
@@ -667,75 +679,93 @@ void gfx_DrawQuad()
         ourDirectXContext.myQuad.myIndexBuffer, 
         DXGI_FORMAT_R32_UINT, 
         0);
-    
-    ourDirectXContext.myContext->DrawIndexed(6, 0, 0);
 }
 
-void gfx_Begin3D()
+void gfx_DrawQuads()
 {
-    ourDirectXContext.myContext->VSSetShader(ourDirectXContext.myCubeShader.myVertexShader, 0, 0);
-    ourDirectXContext.myContext->PSSetShader(ourDirectXContext.myCubeShader.myPixelShader, 0, 0);
-    ourDirectXContext.myContext->IASetInputLayout(ourDirectXContext.myCubeShader.myInputLayout);
-    ourDirectXContext.myContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    DX_prepare2D();
+
+    for(int i = 0; i < ourDirectXContext.myQuadList.myCount; ++i)
+    {
+        DX_quadData& data = ourDirectXContext.myQuadList[i];
+        
+        DX_UpdateAndSetConstantBuffer(
+            ourDirectXContext.myQuad.myConstantBuffer, 
+            &data, 
+            sizeof(data) - sizeof(data.myTextureID));
+
+        ourDirectXContext.myContext->PSSetShaderResources(
+            0,
+            1, 
+            &ourDirectXContext.myTextures[data.myTextureID].myShaderResource);
+        
+        ourDirectXContext.myContext->DrawIndexed(6, 0, 0);
+    }
+    
+    ArrayClear(ourDirectXContext.myQuadList);
 }
 
 void gfx_DrawCube(const Matrix& aTransform)
 {
-    ArrayAdd(ourDirectXContext.myModels, {aTransform, {1.f, 1.f, 1.f, 1.f}});
+    ArrayAdd(ourDirectXContext.myModelList, {aTransform, {1.f, 1.f, 1.f, 1.f}});
 }
 
 void gfx_DrawColoredCube(const Matrix& aTransform, const Vector4f& aColor)
 {
-    ArrayAdd(ourDirectXContext.myModels, {aTransform, aColor});
+    ArrayAdd(ourDirectXContext.myModelList, {aTransform, aColor});
+}
+
+void DX_prepare3D()
+{
+    ASSERT(ourDirectXContext.myCamera != NULL);
+    gfx_camera& camera = *ourDirectXContext.myCamera;
+    ourDirectXContext.my3DConstants.myProjection = camera.myProjection;
+    ourDirectXContext.my3DConstants.myView = camera.myInvertedView;
+    
+    DX_UpdateAndSetConstantBuffer(
+        ourDirectXContext.myConstantBuffer, 
+        &ourDirectXContext.my3DConstants,
+        sizeof(ourDirectXContext.my3DConstants));
+    
+    ID3D11DeviceContext* dxContext = ourDirectXContext.myContext;
+    
+    dxContext->VSSetShader(ourDirectXContext.myCubeShader.myVertexShader, 0, 0);
+    dxContext->PSSetShader(ourDirectXContext.myCubeShader.myPixelShader, 0, 0);
+    dxContext->IASetInputLayout(ourDirectXContext.myCubeShader.myInputLayout);
+    dxContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+ 
+    DX_renderobject& cube = ourDirectXContext.myCube;
+    UINT stride = sizeof(DX_cubeVertex);
+    UINT offset = 0;
+    
+    dxContext->IASetVertexBuffers(
+        0, 
+        1, 
+        &cube.myVertexBuffer, 
+        &stride, 
+        &offset);
+    
+    dxContext->IASetIndexBuffer(
+        cube.myIndexBuffer, 
+        DXGI_FORMAT_R32_UINT, 
+        0);
 }
 
 void gfx_DrawModels()
 {
-    gfx_Begin3D();
+    DX_prepare3D();
     
-    for(int i = 0; i < ourDirectXContext.myModels.myCount; ++i)
+    for(int i = 0; i < ourDirectXContext.myModelList.myCount; ++i)
     {
-        const DX_modelData& data = ourDirectXContext.myModels[i];
-        ourDirectXContext.myModelConstants.myWorld = data.myMatrix;
-        ourDirectXContext.myModelConstants.myColor = data.myColor;
+        DX_modelData& data = ourDirectXContext.myModelList[i];
     
-        DX_renderobject& cube = ourDirectXContext.myCube;
-        DX_constantBuffer& buffer = cube.myConstantBuffer;
-    
-        D3D11_MAPPED_SUBRESOURCE resource;
-        HRESULT result = ourDirectXContext.myContext->Map(
-            buffer.myBuffer,
-            0,
-            D3D11_MAP_WRITE_DISCARD,
-            0,
-            &resource);
-        ASSERT(result == S_OK);
-    
-        memcpy(resource.pData, &ourDirectXContext.myModelConstants, sizeof(ourDirectXContext.myModelConstants));
-    
-        ourDirectXContext.myContext->Unmap(
-            buffer.myBuffer,
-            0);
-    
-        ourDirectXContext.myContext->VSSetConstantBuffers(buffer.myBufferIndex, 1, &buffer.myBuffer);
-    
-        UINT stride = sizeof(DX_cubeVertex);
-        UINT offset = 0;
-    
-        ourDirectXContext.myContext->IASetVertexBuffers(
-            0, 
-            1, 
-            &cube.myVertexBuffer, 
-            &stride, 
-            &offset);
-    
-        ourDirectXContext.myContext->IASetIndexBuffer(
-            cube.myIndexBuffer, 
-            DXGI_FORMAT_R32_UINT, 
-            0);
-    
+        DX_UpdateAndSetConstantBuffer(
+            ourDirectXContext.myCube.myConstantBuffer, 
+            &data, 
+            sizeof(data));
+        
         ourDirectXContext.myContext->DrawIndexed(36, 0, 0);
     }
     
-    ArrayClear(ourDirectXContext.myModels);
+    ArrayClear(ourDirectXContext.myModelList);
 }

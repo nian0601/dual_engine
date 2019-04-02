@@ -4,6 +4,13 @@ struct DX_modelData
     Vector4f myColor;
 };
 
+struct DX_quadData
+{
+    Vector2f myPosition;
+    Vector2f mySize;
+    unsigned int myTextureID;
+};
+
 struct DX_quadVertex
 {
     Vector3f pos;
@@ -20,12 +27,6 @@ struct DX_3dConstants
 {
     Matrix myView;
     Matrix myProjection;
-};
-
-struct DX_modelConstants
-{
-    Matrix myWorld;
-    Vector4f myColor;
 };
 
 struct DX_shader
@@ -70,20 +71,22 @@ struct DX_context
     
     DX_shader myQuadShader;
     DX_renderobject myQuad;
+    GrowingArray<DX_quadData> myQuadList;
     
     DX_texture myTextures[16];
     unsigned int myNextTextureID;
     
     
-    DX_shader myCubeShader;
-    DX_renderobject myCube;
+
     DX_constantBuffer myConstantBuffer;
     DX_3dConstants my3DConstants;
-    DX_modelConstants myModelConstants;
+    gfx_camera* myCamera;
+    
+    DX_shader myCubeShader;
+    DX_renderobject myCube;
+    GrowingArray<DX_modelData> myModelList;
     
     ID3D11SamplerState* mySamplerState;
     ID3D11RasterizerState* myRasterizerState;
     ID3D11DepthStencilState* myDepthState;
-    
-    GrowingArray<DX_modelData> myModels;
 };

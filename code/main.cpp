@@ -114,6 +114,8 @@ HWND Win32CreateWindow(const char* aTitle, int aWindowWidth, int aWindowHeight)
         GetModuleHandle(NULL),
         NULL);
     
+    RECT windowSize;
+    GetWindowRect(windowHandle, &windowSize);
     ASSERT(windowHandle != NULL);
     
     RegisterInputDevices(windowHandle);
@@ -138,6 +140,10 @@ int main(int argc, char** argv)
     HWND windowHandle = Win32CreateWindow(windowTitle, windowWidth, windowHeight);
     gfx_Init(windowHandle, windowWidth, windowHeight);
     
+    RECT clientArea;
+    ASSERT(GetClientRect(windowHandle, &clientArea) != 0);
+    
+    
     unsigned int texture0 = LoadTexture(false, "container.jpg");
     unsigned int texture1  = LoadTexture(true, "awesomeface.png");
     
@@ -152,12 +158,17 @@ int main(int argc, char** argv)
     gfx_camera myCamera;
     myCamera.myWindowSize.x = windowWidth;
     myCamera.myWindowSize.y = windowHeight;
+    myCamera.myScreenSize.x = clientArea.right - clientArea.left;
+    myCamera.myScreenSize.y = clientArea.bottom - clientArea.top;
+    
     myCamera.myProjection = ProjectionMatrix(0.1f, 1000.f, float(windowHeight) / windowWidth, pi * 0.5f);
     myCamera.myView = IdentityMatrix();
     myCamera.myInvertedView = IdentityMatrix();
 
     SetTranslation(myCamera.myView, {30.f, 15.f, -35.f});
     myCamera.myView = myCamera.myView * RotationMatrixX(pi * 0.25f);
+    
+    gfx_SetCamera(&myCamera);
     
     DE_Timer frameTimer = GetTimer();
 
@@ -188,18 +199,15 @@ int main(int argc, char** argv)
         
         
         gfx_Clear();
-        gfx_CommitConstantData(myCamera);
         
-#if 1
+#if 0
         
         gfx_DrawModels();
         
 #else
-        
-        gfx_Begin2D();
-        gfx_BindTexture(texture0, 0, "texture0");
-        gfx_BindTexture(texture1, 1, "texture1");
-        gfx_DrawQuad();        
+     
+        gfx_DrawQuad(texture0, 50, 50, 300, 300); 
+        gfx_DrawQuads();
         
 #endif
         
