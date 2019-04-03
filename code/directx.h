@@ -58,6 +58,25 @@ struct DX_renderobject
     DX_constantBuffer myConstantBuffer;
 };
 
+enum DX_BlendState
+{
+    NO_BLEND,
+    ALPHA_BLEND,
+    
+    //
+    BLEND_COUNT
+};
+
+enum DX_DepthState
+{
+    ENABLED,
+    DISABLED,
+    NO_READ_NO_WRITE,
+    
+    //
+    DEPTH_COUNT
+};
+
 struct DX_context
 {
     IDXGISwapChain* mySwapChain;
@@ -88,5 +107,6 @@ struct DX_context
     
     ID3D11SamplerState* mySamplerState;
     ID3D11RasterizerState* myRasterizerState;
-    ID3D11DepthStencilState* myDepthState;
+    ID3D11DepthStencilState* myDepthStates[DEPTH_COUNT];
+    ID3D11BlendState* myBlendStates[BLEND_COUNT];
 };

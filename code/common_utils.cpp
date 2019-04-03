@@ -1,7 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-const char* DE_ReadEntireFile(const char* aFilePath)
+struct DE_File
+{
+    const char* myContents;
+    long myFileSize;
+};
+
+DE_File DE_ReadEntireFile(const char* aFilePath)
 {
     FILE* file = fopen(aFilePath, "rb");
     fseek(file, 0, SEEK_END);
@@ -13,7 +19,17 @@ const char* DE_ReadEntireFile(const char* aFilePath)
     fclose(file);
     
     string[fileSize] = 0;
-    return string;
+    
+    DE_File result;
+    result.myContents = string;
+    result.myFileSize = fileSize;
+    return result;
+}
+
+void DE_FreeFile(DE_File& aFile)
+{
+    free((void*)aFile.myContents);
+    aFile = {};
 }
 
 template <typename T>

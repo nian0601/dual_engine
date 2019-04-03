@@ -6,6 +6,9 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
+#define STB_TRUETYPE_IMPLEMENTATION
+#include "stb_truetype.h"
+
 #include "DE_Math.h"
 #include "DE_Collision.h"
 #include "DE_Collision.cpp"
@@ -32,16 +35,46 @@
 #include "opengl.cpp"
 #endif
 
-unsigned int LoadTexture(bool aUseAlpha, const char* aFilePath)
+unsigned int LoadTexture(gfxTextureFormat aTextureFormat, const char* aFilePath)
 {
     int width, height, nrChannels;
     unsigned char* data = stbi_load(aFilePath, &width, &height, &nrChannels, 4);
     ASSERT(data != NULL);
     
-    unsigned int texture = gfx_CreateTexture(width, height, aUseAlpha, data);
+    unsigned int texture = gfx_CreateTexture(width, height, aTextureFormat, data);
     
     stbi_image_free(data);
     return texture;
+}
+
+unsigned int CreateTextTexture()
+{
+    DE_File fontFile = DE_ReadEntireFile("c:/Windows/Fonts/arial.ttf");
+    
+    stbtt_fontinfo font;
+    
+    const unsigned char* fontBuffer = (unsigned char*)fontFile.myContents;
+    stbtt_InitFont(&font, fontBuffer, stbtt_GetFontOffsetForIndex(fontBuffer, 0));
+    
+    int width;
+    int height;
+    int xOffset;
+    int yOffset;
+    float fontHeight = 64.f;
+    unsigned char* bitmap = stbtt_GetCodepointBitmap(
+        &font,
+        0,
+        stbtt_ScaleForPixelHeight(&font, fontHeight), 
+        'B',
+        &width, 
+        &height,
+        &xOffset,
+        &yOffset);
+
+    unsigned int textureID = gfx_CreateTexture(width, height, SINGLE_CHANNEL, bitmap);
+    stbtt_FreeBitmap(bitmap, NULL);
+    
+    return textureID;
 }
 
 LRESULT CALLBACK WndProc(HWND aHwnd, UINT aMessage, WPARAM aWParam, LPARAM aLParam)
@@ -144,8 +177,9 @@ int main(int argc, char** argv)
     ASSERT(GetClientRect(windowHandle, &clientArea) != 0);
     
     
-    unsigned int texture0 = LoadTexture(false, "container.jpg");
-    unsigned int texture1  = LoadTexture(true, "awesomeface.png");
+    unsigned int texture0 = LoadTexture(RGB, "container.jpg");
+    unsigned int texture1  = LoadTexture(RGBA, "awesomeface.png");
+    unsigned int fontTexture = CreateTextTexture();
     
     gfx_Viewport(0, 0, windowWidth, windowHeight);
     gfx_ClearColor(0.5f, 0.2f, 0.1f);
@@ -200,16 +234,12 @@ int main(int argc, char** argv)
         
         gfx_Clear();
         
-#if 0
-        
         gfx_DrawModels();
-        
-#else
      
         gfx_DrawQuad(texture0, 50, 50, 300, 300); 
-        gfx_DrawQuads();
+        gfx_DrawQuad(fontTexture, 350, 350, 400, 400); 
+        gfx_DrawQuads();      
         
-#endif
         
         
         gfx_FinishFrame();    

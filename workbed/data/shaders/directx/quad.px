@@ -9,5 +9,7 @@ struct VS_OUTPUT
 
 float4 PS(VS_OUTPUT input) : SV_TARGET
 {
-   return AlbedoTexture.Sample(LinearSampler, input.Tex);
+	float4 color = AlbedoTexture.Sample(LinearSampler, input.Tex);
+	color.yzw = color.x;
+	return color;
 };

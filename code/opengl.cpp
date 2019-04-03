@@ -74,21 +74,21 @@ unsigned int OpenGL_CreateShader(const char* aVertexName, const char* aPixelName
     
     // Compile our VertexShader
     snprintf(fullPath, 100, "data/shaders/opengl/%s", aVertexName);
-    const char* vertexData = DE_ReadEntireFile(fullPath);
+    DE_File vertexFile = DE_ReadEntireFile(fullPath);
     unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertexShader, 1, &vertexData, NULL);
+    glShaderSource(vertexShader, 1, &vertexFile.myContents, NULL);
     glCompileShader(vertexShader);
     OpenGL_VerifyShader(vertexShader);
-    free((void*)vertexData);
+    DE_FreeFile(vertexFile);
     
     // Compile our FragmentShader
     snprintf(fullPath, 100, "data/shaders/opengl/%s", aPixelName);
-    const char* pixelData = DE_ReadEntireFile(fullPath);
+    DE_File pixelFile = DE_ReadEntireFile(fullPath);
     unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragmentShader, 1, &pixelData, NULL);
+    glShaderSource(fragmentShader, 1, &pixelFile.myContents, NULL);
     glCompileShader(fragmentShader);
     OpenGL_VerifyShader(fragmentShader);
-    free((void*)pixelData);
+    DE_FreeFile(pixelFile);
     
     // Link our Vertex and Fragment Shaders
     unsigned int shaderProgram = glCreateProgram();
@@ -312,7 +312,6 @@ void gfx_Init(HWND aWindowHandle, int aWindowHeight, int aWindowWidth)
     result = gl_lite_init();
     ASSERT(result == true);
     
-    glEnable(GL_DEPTH_TEST);
     OpenGL_CreateQuad();
     OpenGL_CreateCube();
     
@@ -348,7 +347,7 @@ void gfx_FinishFrame()
     glFinish();
 }
 
-unsigned int gfx_CreateTexture(int aWidth, int aHeight, bool aUseAlpha, void* someTextureData)
+unsigned int gfx_CreateTexture(int aWidth, int aHeight, gfxTextureFormat aTextureFormat, void* someTextureData)
 {
     unsigned int texture;
     glGenTextures(1, &texture);
@@ -359,7 +358,11 @@ unsigned int gfx_CreateTexture(int aWidth, int aHeight, bool aUseAlpha, void* so
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
  
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, aWidth, aHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, someTextureData);
+    int format = GL_RGBA;
+    if(aTextureFormat == SINGLE_CHANNEL)
+        format = GL_RED;
+    
+    glTexImage2D(GL_TEXTURE_2D, 0, format, aWidth, aHeight, 0, format, GL_UNSIGNED_BYTE, someTextureData);
     
     return texture;
 }
@@ -388,6 +391,10 @@ void gfx_DrawQuad(unsigned int aTextureID, float aX1, float aY1, float aX2, floa
 
 void gfx_DrawQuads()
 {
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    
     glUseProgram(ourOpenGL_Context.myQuadShader);
     ourOpenGL_Context.myActiveShader = ourOpenGL_Context.myQuadShader;
   
@@ -397,6 +404,7 @@ void gfx_DrawQuads()
     
     glUniform1i(textureLocation, 0);
     glActiveTexture(GL_TEXTURE0);
+    glBindVertexArray(ourOpenGL_Context.myQuad.myVertexArrayObject);
     
     for(int i = 0; i < ourOpenGL_Context.myQuadList.myCount; ++i)
     {
@@ -406,7 +414,6 @@ void gfx_DrawQuads()
         glUniform2f(positionLocation, data.myPosition.x, data.myPosition.y);
         glUniform2f(sizeLocation, data.mySize.x, data.mySize.y);
 
-        glBindVertexArray(ourOpenGL_Context.myQuad.myVertexArrayObject);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     }
     
@@ -425,8 +432,14 @@ void gfx_DrawColoredCube(const Matrix& aTransform, const Vector4f& aColor)
 
 void gfx_DrawModels()
 {
+    glEnable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
+    
     ASSERT(ourOpenGL_Context.myCamera != NULL);
     gfx_camera& camera = *ourOpenGL_Context.myCamera;
+   
+    glUseProgram(ourOpenGL_Context.myCubeShader);
+    ourOpenGL_Context.myActiveShader = ourOpenGL_Context.myCubeShader;
     
     int projectionLocation = glGetUniformLocation(ourOpenGL_Context.myActiveShader, "Projection");
     glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, camera.myProjection.myData);
@@ -434,8 +447,7 @@ void gfx_DrawModels()
     int viewLocation = glGetUniformLocation(ourOpenGL_Context.myActiveShader, "View");
     glUniformMatrix4fv(viewLocation, 1, GL_FALSE, camera.myInvertedView.myData);
     
-    glUseProgram(ourOpenGL_Context.myCubeShader);
-    ourOpenGL_Context.myActiveShader = ourOpenGL_Context.myCubeShader;
+    glBindVertexArray(ourOpenGL_Context.myCube.myVertexArrayObject);
     
     for(int i = 0; i < ourOpenGL_Context.myModelList.myCount; ++i)
     {
@@ -447,7 +459,6 @@ void gfx_DrawModels()
         int colorAndMetalness = glGetUniformLocation(ourOpenGL_Context.myActiveShader, "ColorAndMetalnessIn");
         glUniform4f(colorAndMetalness, data.myColor.x, data.myColor.y, data.myColor.z, data.myColor.w);
         
-        glBindVertexArray(ourOpenGL_Context.myCube.myVertexArrayObject);
         glDrawElements(GL_TRIANGLES, 32, GL_UNSIGNED_INT, 0);    
     }
     

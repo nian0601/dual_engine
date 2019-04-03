@@ -9,4 +9,7 @@ uniform sampler2D AlbedoTexture;
 void main()
 {
    FragColor = texture(AlbedoTexture, texCoord);
+   FragColor.g = FragColor.r;
+   FragColor.b = FragColor.r;
+   FragColor.w = FragColor.r;
 };

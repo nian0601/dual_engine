@@ -15,7 +15,13 @@ void gfx_ClearColor(float aR, float aG, float aB);
 void gfx_Clear();
 void gfx_FinishFrame();
 
-unsigned int gfx_CreateTexture(int aWidth, int aHeight, bool aUseAlpha, void* someTextureData);
+enum gfxTextureFormat
+{
+    SINGLE_CHANNEL,
+    RGB,
+    RGBA,
+};
+unsigned int gfx_CreateTexture(int aWidth, int aHeight, gfxTextureFormat aTextureFormat, void* someTextureData);
 
 void gfx_SetCamera(gfx_camera* aCamera);
 

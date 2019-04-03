@@ -27,7 +27,6 @@ void DX_CompileShader(const char* someShaderData, const char* anEntryPoint, cons
         &aBufferOut,
         &errorBlob);
     
-    free((void*)someShaderData);
     if(result != S_OK)
     {
         const char* errorMsg = NULL;
@@ -45,14 +44,17 @@ void DX_CreateShader(DX_shader& aShader, bool aSprite, const char* aVertexName, 
 {
     char fullPath[100];
     int numChars = snprintf(fullPath, 100, "data/shaders/directx/%s", aVertexName);
-    const char* vertexData = DE_ReadEntireFile(fullPath);
+    DE_File vertexFile = DE_ReadEntireFile(fullPath);
     
     numChars = snprintf(fullPath, 100, "data/shaders/directx/%s", aPixelName);
-    const char* pixelData = DE_ReadEntireFile(fullPath);
+    DE_File pixelFile = DE_ReadEntireFile(fullPath);
     
-    DX_CompileShader(vertexData, "VS", "vs_5_0", aShader.myVertexShaderBuffer);
-    DX_CompileShader(pixelData, "PS", "ps_5_0", aShader.myPixelShaderBuffer);
+    DX_CompileShader(vertexFile.myContents, "VS", "vs_5_0", aShader.myVertexShaderBuffer);
+    DX_CompileShader(pixelFile.myContents, "PS", "ps_5_0", aShader.myPixelShaderBuffer);
 
+    DE_FreeFile(vertexFile);
+    DE_FreeFile(pixelFile);
+    
     HRESULT result = ourDirectXContext.myDevice->CreateVertexShader(
         aShader.myVertexShaderBuffer->GetBufferPointer(),
         aShader.myVertexShaderBuffer->GetBufferSize(),
@@ -382,7 +384,9 @@ void DX_CreateRasterizerState()
 }
 
 void DX_CreateDepthState()
-{
+{   
+    ID3D11Device* dxDevice = ourDirectXContext.myDevice;
+    
     D3D11_DEPTH_STENCIL_DESC depthDesc = {};
     depthDesc.DepthFunc = D3D11_COMPARISON_LESS;
 	depthDesc.StencilEnable = true;
@@ -400,12 +404,55 @@ void DX_CreateDepthState()
 
 	depthDesc.DepthEnable = true;
 	depthDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-    HRESULT result = ourDirectXContext.myDevice->CreateDepthStencilState(
+    HRESULT result = dxDevice->CreateDepthStencilState(
         &depthDesc,
-        &ourDirectXContext.myDepthState);
+        &ourDirectXContext.myDepthStates[ENABLED]);
     ASSERT(result == S_OK);
     
-    ourDirectXContext.myContext->OMSetDepthStencilState(ourDirectXContext.myDepthState, 1);
+    depthDesc.DepthEnable = false;
+    result = dxDevice->CreateDepthStencilState(
+        &depthDesc,
+        &ourDirectXContext.myDepthStates[DISABLED]);
+    ASSERT(result == S_OK);
+    
+    depthDesc.DepthEnable = false;
+    depthDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+    depthDesc.StencilEnable = false;
+    depthDesc.StencilReadMask = 0xff;
+    depthDesc.StencilWriteMask = 0x0;
+    result = dxDevice->CreateDepthStencilState(
+        &depthDesc,
+        &ourDirectXContext.myDepthStates[NO_READ_NO_WRITE]);
+    ASSERT(result == S_OK);
+}
+
+void DX_CreateBlendStates()
+{
+    ID3D11Device* dxDevice = ourDirectXContext.myDevice;
+    
+    D3D11_BLEND_DESC blendDesc = {};
+	blendDesc.AlphaToCoverageEnable = true;
+	blendDesc.IndependentBlendEnable = false;
+	blendDesc.RenderTarget[0].BlendEnable = TRUE;
+	blendDesc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+	blendDesc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+	blendDesc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+	blendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_SRC_ALPHA;
+	blendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_DEST_ALPHA;
+	blendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+	blendDesc.RenderTarget[0].RenderTargetWriteMask = 0x0f;
+
+
+	HRESULT result = dxDevice->CreateBlendState(&blendDesc, &ourDirectXContext.myBlendStates[ALPHA_BLEND]);
+    ASSERT(result == S_OK);
+
+	blendDesc.AlphaToCoverageEnable = false;
+	blendDesc.IndependentBlendEnable = false;
+	blendDesc.RenderTarget[0].BlendEnable = FALSE;
+	blendDesc.RenderTarget[0].RenderTargetWriteMask = 0x0f;
+
+	result = dxDevice->CreateBlendState(&blendDesc, &ourDirectXContext.myBlendStates[NO_BLEND]);
+    ASSERT(result == S_OK);
 }
 
 void DX_CreateSwapChain(HWND aWindowHandle, int aWindowWidth, int aWindowHeight)
@@ -526,6 +573,7 @@ void gfx_Init(HWND aWindowHandle, int aWindowWidth, int aWindowHeight)
     DX_CreateSamplerState();
     DX_CreateDepthState();
     DX_CreateRasterizerState();
+    DX_CreateBlendStates();
     
     DX_CreateQuad();
     DX_CreateCube();
@@ -595,7 +643,7 @@ void gfx_FinishFrame()
     ourDirectXContext.mySwapChain->Present(0, 0);
 }
 
-unsigned int gfx_CreateTexture(int aWidth, int aHeight, bool aUseAlpha, void* someTextureData)
+unsigned int gfx_CreateTexture(int aWidth, int aHeight, gfxTextureFormat aTextureFormat, void* someTextureData)
 {
     ASSERT(ourDirectXContext.myNextTextureID < 16);
     
@@ -604,7 +652,12 @@ unsigned int gfx_CreateTexture(int aWidth, int aHeight, bool aUseAlpha, void* so
     textureDesc.Height = aHeight;
     textureDesc.MipLevels = 1;
     textureDesc.ArraySize = 1;
-    textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    
+    if(aTextureFormat == SINGLE_CHANNEL)
+        textureDesc.Format = DXGI_FORMAT_R8_UNORM;
+    else
+        textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    
     textureDesc.SampleDesc.Count = 1;
     textureDesc.SampleDesc.Quality = 0;
     textureDesc.Usage = D3D11_USAGE_IMMUTABLE;
@@ -614,7 +667,11 @@ unsigned int gfx_CreateTexture(int aWidth, int aHeight, bool aUseAlpha, void* so
     
     D3D11_SUBRESOURCE_DATA textureData = {};
     textureData.pSysMem = someTextureData;
-    textureData.SysMemPitch = sizeof(unsigned char) * 4  * aWidth;
+    
+    if(aTextureFormat == SINGLE_CHANNEL)
+        textureData.SysMemPitch = sizeof(unsigned char) * aWidth;
+    else
+        textureData.SysMemPitch = sizeof(unsigned char) * 4  * aWidth;
     textureData.SysMemSlicePitch = 0;
     
     DX_texture& texture = ourDirectXContext.myTextures[ourDirectXContext.myNextTextureID];
@@ -659,23 +716,26 @@ void gfx_DrawQuad(unsigned int aTextureID, float aX1, float aY1, float aX2, floa
 
 void DX_prepare2D()
 {   
-    ourDirectXContext.myContext->VSSetShader(ourDirectXContext.myQuadShader.myVertexShader, 0, 0);
-    ourDirectXContext.myContext->PSSetShader(ourDirectXContext.myQuadShader.myPixelShader, 0, 0);
-    ourDirectXContext.myContext->IASetInputLayout(ourDirectXContext.myQuadShader.myInputLayout);
-    ourDirectXContext.myContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    ID3D11DeviceContext* dxContext = ourDirectXContext.myContext;
+    dxContext->OMSetDepthStencilState(ourDirectXContext.myDepthStates[NO_READ_NO_WRITE], 1);
+    dxContext->OMSetBlendState(ourDirectXContext.myBlendStates[ALPHA_BLEND], NULL, 0xFFFFFFFF);
+    dxContext->VSSetShader(ourDirectXContext.myQuadShader.myVertexShader, 0, 0);
+    dxContext->PSSetShader(ourDirectXContext.myQuadShader.myPixelShader, 0, 0);
+    dxContext->IASetInputLayout(ourDirectXContext.myQuadShader.myInputLayout);
+    dxContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     
     
     UINT stride = sizeof(DX_quadVertex);
     UINT offset = 0;
     
-    ourDirectXContext.myContext->IASetVertexBuffers(
+    dxContext->IASetVertexBuffers(
         0, 
         1, 
         &ourDirectXContext.myQuad.myVertexBuffer, 
         &stride, 
         &offset);
     
-    ourDirectXContext.myContext->IASetIndexBuffer(
+    dxContext->IASetIndexBuffer(
         ourDirectXContext.myQuad.myIndexBuffer, 
         DXGI_FORMAT_R32_UINT, 
         0);
@@ -729,6 +789,8 @@ void DX_prepare3D()
     
     ID3D11DeviceContext* dxContext = ourDirectXContext.myContext;
     
+    dxContext->OMSetDepthStencilState(ourDirectXContext.myDepthStates[ENABLED], 1);
+    dxContext->OMSetBlendState(ourDirectXContext.myBlendStates[NO_BLEND], NULL, 0xFFFFFFFF);
     dxContext->VSSetShader(ourDirectXContext.myCubeShader.myVertexShader, 0, 0);
     dxContext->PSSetShader(ourDirectXContext.myCubeShader.myPixelShader, 0, 0);
     dxContext->IASetInputLayout(ourDirectXContext.myCubeShader.myInputLayout);
