@@ -28,12 +28,5 @@ Vector3f GetPositionOnTopOfEntity(const Entity& anEntity)
 
 void RenderEntity(const Entity& anEntity, const Vector4f& aColor)
 {
-    static Matrix dummyTransform;
-    dummyTransform = IdentityMatrix();
-    
-    dummyTransform *= ScaleMatrix(anEntity.mySize);
-    Translate(dummyTransform, anEntity.myPosition);
-    
-    
-    gfx_DrawColoredCube(dummyTransform, aColor);
+    QueueCube(anEntity.myPosition, anEntity.mySize, aColor);
 }

@@ -696,25 +696,34 @@ void gfx_SetCamera(gfx_camera* aCamera)
     ourDirectXContext.myCamera = aCamera;
 }
 
-void gfx_DrawQuad(unsigned int aTextureID, float aX1, float aY1, float aX2, float aY2)
+void gfx_DrawQuad(unsigned int aTextureID, float aX, float aY, float aWidth, float aHeight)
 {
     ASSERT(ourDirectXContext.myCamera != NULL);
     ASSERT(aTextureID < 16);
     
     Vector2f& screenSize = ourDirectXContext.myCamera->myScreenSize;
     
-    float normalizedX1 = aX1 / screenSize.x;
-    float normalizedY1 = aY1 / screenSize.y;
-    float normalizedX2 = aX2 / screenSize.x;
-    float normalizedY2 = aY2 / screenSize.y;
+    float normalizedX = aX / screenSize.x;
+    float normalizedY = aY / screenSize.y;
+    float normalizedWidth = aWidth / screenSize.x;
+    float normalizedHeight = aHeight / screenSize.y;
     
-    Vector2f position = {normalizedX1, normalizedY1};
-    Vector2f size = {normalizedX2 - normalizedX1, normalizedY2 - normalizedY1};
+    DX_quadData data = {{normalizedX, normalizedY}, {normalizedWidth, normalizedHeight}};
     
-    ArrayAdd(ourDirectXContext.myQuadList, {position, size, aTextureID});
+    DX_UpdateAndSetConstantBuffer(
+        ourDirectXContext.myQuad.myConstantBuffer, 
+        &data, 
+        sizeof(data) - sizeof(data.myTextureID));
+    
+    ourDirectXContext.myContext->PSSetShaderResources(
+        0,
+        1, 
+        &ourDirectXContext.myTextures[aTextureID].myShaderResource);
+    
+    ourDirectXContext.myContext->DrawIndexed(6, 0, 0);
 }
 
-void DX_prepare2D()
+void gfx_Begin2D()
 {   
     ID3D11DeviceContext* dxContext = ourDirectXContext.myContext;
     dxContext->OMSetDepthStencilState(ourDirectXContext.myDepthStates[NO_READ_NO_WRITE], 1);
@@ -741,41 +750,19 @@ void DX_prepare2D()
         0);
 }
 
-void gfx_DrawQuads()
+void gfx_DrawCube(const Matrix& aTransform, const Vector4f& aColor)
 {
-    DX_prepare2D();
-
-    for(int i = 0; i < ourDirectXContext.myQuadList.myCount; ++i)
-    {
-        DX_quadData& data = ourDirectXContext.myQuadList[i];
-        
-        DX_UpdateAndSetConstantBuffer(
-            ourDirectXContext.myQuad.myConstantBuffer, 
-            &data, 
-            sizeof(data) - sizeof(data.myTextureID));
-
-        ourDirectXContext.myContext->PSSetShaderResources(
-            0,
-            1, 
-            &ourDirectXContext.myTextures[data.myTextureID].myShaderResource);
-        
-        ourDirectXContext.myContext->DrawIndexed(6, 0, 0);
-    }
+    DX_modelData data = {aTransform, aColor};
     
-    ArrayClear(ourDirectXContext.myQuadList);
+    DX_UpdateAndSetConstantBuffer(
+        ourDirectXContext.myCube.myConstantBuffer, 
+        &data, 
+        sizeof(data));
+    
+    ourDirectXContext.myContext->DrawIndexed(36, 0, 0);
 }
 
-void gfx_DrawCube(const Matrix& aTransform)
-{
-    ArrayAdd(ourDirectXContext.myModelList, {aTransform, {1.f, 1.f, 1.f, 1.f}});
-}
-
-void gfx_DrawColoredCube(const Matrix& aTransform, const Vector4f& aColor)
-{
-    ArrayAdd(ourDirectXContext.myModelList, {aTransform, aColor});
-}
-
-void DX_prepare3D()
+void gfx_Begin3D()
 {
     ASSERT(ourDirectXContext.myCamera != NULL);
     gfx_camera& camera = *ourDirectXContext.myCamera;
@@ -811,23 +798,4 @@ void DX_prepare3D()
         cube.myIndexBuffer, 
         DXGI_FORMAT_R32_UINT, 
         0);
-}
-
-void gfx_DrawModels()
-{
-    DX_prepare3D();
-    
-    for(int i = 0; i < ourDirectXContext.myModelList.myCount; ++i)
-    {
-        DX_modelData& data = ourDirectXContext.myModelList[i];
-    
-        DX_UpdateAndSetConstantBuffer(
-            ourDirectXContext.myCube.myConstantBuffer, 
-            &data, 
-            sizeof(data));
-        
-        ourDirectXContext.myContext->DrawIndexed(36, 0, 0);
-    }
-    
-    ArrayClear(ourDirectXContext.myModelList);
 }

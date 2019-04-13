@@ -15,10 +15,10 @@
 #include "DE_Timer.cpp"
 #include "DE_Input.cpp"
 #include "gfx_interface.h"
-
 #include "common_utils.cpp"
 #include "array.cpp"
 #include "heap.cpp"
+#include "renderer.cpp"
 
 #include "entity.h"
 #include "entity.cpp"
@@ -27,7 +27,7 @@
 #include "mapgenerator.cpp"
 #include "game.cpp"
 
-//#define USE_DIRECTX
+#define USE_DIRECTX
 
 #ifdef USE_DIRECTX
 #include "directx.cpp"
@@ -206,6 +206,7 @@ int main(int argc, char** argv)
     
     DE_Timer frameTimer = GetTimer();
 
+    SetupRenderer();
     SetupGame();
     
     while(isRunning)
@@ -234,14 +235,10 @@ int main(int argc, char** argv)
         
         gfx_Clear();
         
-        gfx_DrawModels();
-     
-        gfx_DrawQuad(texture0, 50, 50, 300, 300); 
-        gfx_DrawQuad(fontTexture, 350, 350, 400, 400); 
-        gfx_DrawQuads();      
+        QueueQuad(texture0, {200.f, 200.f}, {50.f, 50.f});
+        QueueQuad(fontTexture, {300.f, 300.f}, {50.f, 50.f});
         
-        
-        
+        PushRendererData();
         gfx_FinishFrame();    
     }
     

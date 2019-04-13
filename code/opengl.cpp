@@ -1,19 +1,6 @@
 #define GL_LITE_IMPLEMENTATION
 #include "gl_lite.h"
 
-struct OpenGL_modelData
-{
-    Matrix myMatrix;
-    Vector4f myColor;
-};
-
-struct OpenGL_quadData
-{
-    Vector2f myPosition;
-    Vector2f mySize;
-    unsigned int myTextureID;
-};
-
 struct OpenGL_cubeVertex
 {
     Vector4f pos;
@@ -38,8 +25,9 @@ struct OpenGL_context
     unsigned int myQuadShader;
     unsigned int myCubeShader;
     
-    GrowingArray<OpenGL_modelData> myModelList;
-    GrowingArray<OpenGL_quadData> myQuadList;
+    int myPositionLocation;
+    int mySizeLocation;
+    int myTextureLocation;
 };
 
 static OpenGL_context ourOpenGL_Context;
@@ -318,8 +306,6 @@ void gfx_Init(HWND aWindowHandle, int aWindowHeight, int aWindowWidth)
     ourOpenGL_Context.myQuadShader = OpenGL_CreateShader("quad.vx", "quad.px");
     ourOpenGL_Context.myCubeShader = OpenGL_CreateShader("cube.vx", "cube.px");
     
-    ArrayAlloc(ourOpenGL_Context.myModelList, 12);
-    ArrayAlloc(ourOpenGL_Context.myQuadList, 12);
     ourOpenGL_Context.myCamera = NULL;
 }
 
@@ -372,24 +358,36 @@ void gfx_SetCamera(gfx_camera* aCamera)
     ourOpenGL_Context.myCamera = aCamera;
 }
 
-void gfx_DrawQuad(unsigned int aTextureID, float aX1, float aY1, float aX2, float aY2)
+void gfx_DrawQuad(unsigned int aTextureID, float aX, float aY, float aWidth, float aHeight)
 {
     ASSERT(ourOpenGL_Context.myCamera != NULL);
     
     Vector2f& screenSize = ourOpenGL_Context.myCamera->myScreenSize;
     
-    float normalizedX1 = aX1 / screenSize.x;
-    float normalizedY1 = aY1 / screenSize.y;
-    float normalizedX2 = aX2 / screenSize.x;
-    float normalizedY2 = aY2 / screenSize.y;
+    float normalizedX = aX / screenSize.x;
+    float normalizedY = aY / screenSize.y;
+    float normalizedWidth = aWidth / screenSize.x;
+    float normalizedHeight = aHeight / screenSize.y;
     
-    Vector2f position = {normalizedX1, normalizedY1};
-    Vector2f size = {normalizedX2 - normalizedX1, normalizedY2 - normalizedY1};
+    glBindTexture(GL_TEXTURE_2D, aTextureID);
+    glUniform2f(ourOpenGL_Context.myPositionLocation, normalizedX, normalizedY);
+    glUniform2f(ourOpenGL_Context.mySizeLocation, normalizedWidth, normalizedHeight);
     
-    ArrayAdd(ourOpenGL_Context.myQuadList, {position, size, aTextureID});
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 }
 
-void gfx_DrawQuads()
+void gfx_DrawCube(const Matrix& aTransform, const Vector4f& aColor)
+{   
+    int worldLocation = glGetUniformLocation(ourOpenGL_Context.myActiveShader, "World");
+    glUniformMatrix4fv(worldLocation, 1, GL_FALSE, aTransform.myData);
+    
+    int colorAndMetalness = glGetUniformLocation(ourOpenGL_Context.myActiveShader, "ColorAndMetalnessIn");
+    glUniform4f(colorAndMetalness, aColor.x, aColor.y, aColor.z, aColor.w);
+    
+    glDrawElements(GL_TRIANGLES, 32, GL_UNSIGNED_INT, 0);    
+}
+
+void gfx_Begin2D()
 {
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
@@ -397,40 +395,18 @@ void gfx_DrawQuads()
     
     glUseProgram(ourOpenGL_Context.myQuadShader);
     ourOpenGL_Context.myActiveShader = ourOpenGL_Context.myQuadShader;
-  
-    int positionLocation = glGetUniformLocation(ourOpenGL_Context.myActiveShader, "Position");
-    int sizeLocation = glGetUniformLocation(ourOpenGL_Context.myActiveShader, "Size");
-    int textureLocation = glGetUniformLocation(ourOpenGL_Context.myActiveShader, "AlbedoTexture");
     
-    glUniform1i(textureLocation, 0);
     glActiveTexture(GL_TEXTURE0);
     glBindVertexArray(ourOpenGL_Context.myQuad.myVertexArrayObject);
     
-    for(int i = 0; i < ourOpenGL_Context.myQuadList.myCount; ++i)
-    {
-        OpenGL_quadData& data = ourOpenGL_Context.myQuadList[i];
-        
-        glBindTexture(GL_TEXTURE_2D, data.myTextureID);
-        glUniform2f(positionLocation, data.myPosition.x, data.myPosition.y);
-        glUniform2f(sizeLocation, data.mySize.x, data.mySize.y);
-
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-    }
+    ourOpenGL_Context.myPositionLocation = glGetUniformLocation(ourOpenGL_Context.myActiveShader, "Position");
+    ourOpenGL_Context.mySizeLocation = glGetUniformLocation(ourOpenGL_Context.myActiveShader, "Size");
+    ourOpenGL_Context.myTextureLocation = glGetUniformLocation(ourOpenGL_Context.myActiveShader, "AlbedoTexture");
     
-    ArrayClear(ourOpenGL_Context.myQuadList);
+    glUniform1i(textureLocation, 0);
 }
 
-void gfx_DrawCube(const Matrix& aTransform)
-{   
-    ArrayAdd(ourOpenGL_Context.myModelList, {aTransform, 1.f, 1.f, 1.f, 1.f});
-}
-
-void gfx_DrawColoredCube(const Matrix& aTransform, const Vector4f& aColor)
-{    
-    ArrayAdd(ourOpenGL_Context.myModelList, {aTransform, aColor});
-}
-
-void gfx_DrawModels()
+void gfx_Begin3D()
 {
     glEnable(GL_DEPTH_TEST);
     glDisable(GL_BLEND);
@@ -448,19 +424,4 @@ void gfx_DrawModels()
     glUniformMatrix4fv(viewLocation, 1, GL_FALSE, camera.myInvertedView.myData);
     
     glBindVertexArray(ourOpenGL_Context.myCube.myVertexArrayObject);
-    
-    for(int i = 0; i < ourOpenGL_Context.myModelList.myCount; ++i)
-    {
-        const OpenGL_modelData& data = ourOpenGL_Context.myModelList[i];
-        
-        int worldLocation = glGetUniformLocation(ourOpenGL_Context.myActiveShader, "World");
-        glUniformMatrix4fv(worldLocation, 1, GL_FALSE, data.myMatrix.myData);
-        
-        int colorAndMetalness = glGetUniformLocation(ourOpenGL_Context.myActiveShader, "ColorAndMetalnessIn");
-        glUniform4f(colorAndMetalness, data.myColor.x, data.myColor.y, data.myColor.z, data.myColor.w);
-        
-        glDrawElements(GL_TRIANGLES, 32, GL_UNSIGNED_INT, 0);    
-    }
-    
-    ArrayClear(ourOpenGL_Context.myModelList);
 }
