@@ -15,25 +15,55 @@ struct Asset
     char myIdentifier[MAX_IDENTIFIER_LENGHT];
 };
 
-struct AssetStorage
+struct FontAsset
 {
-    GrowingArray<Asset> myAssets;
+    stbtt_fontinfo myFont;
+    DE_File myFile;
+    float myScaleFactor;
+    
+    GrowingArray<Asset> myBitmaps;
 };
 
-static AssetStorage ourAssetStorage;
+struct Assets
+{
+    FontAsset myDebugFont;
+    GrowingArray<Asset> myBitmaps;
+};
+
+static Assets ourAssets;
+
+void SetupDebugFont()
+{
+    FontAsset& asset = ourAssets.myDebugFont;
+    asset.myFile = DE_ReadEntireFile("c:/Windows/Fonts/arial.ttf");
+    const unsigned char* fontBuffer = (unsigned char*)asset.myFile.myContents;
+    stbtt_InitFont(&asset.myFont, fontBuffer, stbtt_GetFontOffsetForIndex(fontBuffer, 0));
+    
+    float fontHeight = 256.f;
+    asset.myScaleFactor = stbtt_ScaleForPixelHeight(&asset.myFont, fontHeight);
+    
+    ArrayAlloc(asset.myBitmaps, 16);
+}
 
 void SetupAssetStorage()
 {
-    ArrayAlloc(ourAssetStorage.myAssets, 16);
+    ArrayAlloc(ourAssets.myBitmaps, 16);
+    
+    SetupDebugFont();
+}
+
+void FreeAssets()
+{
+    DE_FreeFile(ourAssets.myDebugFont.myFile);
 }
 
 AssetInfo GetBitmap(const char* aFilePath)
 {
     ASSERT(strlen(aFilePath) < MAX_IDENTIFIER_LENGHT);
     
-    for(int i = 0; i < ourAssetStorage.myAssets.myCount; ++i)
+    for(int i = 0; i < ourAssets.myBitmaps.myCount; ++i)
     {
-        const Asset& asset = ourAssetStorage.myAssets[i];
+        const Asset& asset = ourAssets.myBitmaps[i];
         if(strcmp(asset.myIdentifier, aFilePath) == 0)
             return asset.myInfo;
     }
@@ -45,36 +75,30 @@ AssetInfo GetBitmap(const char* aFilePath)
     unsigned int texture = gfx_CreateTexture(width, height, RGBA, data);
     stbi_image_free(data);
     
-    Asset asset;
+    Asset& asset = ArrayAdd(ourAssets.myBitmaps);
     strcpy(asset.myIdentifier, aFilePath);
     asset.myInfo = {texture, {(float)width, (float)height}};
-    
-    ArrayAdd(ourAssetStorage.myAssets, asset);
+            
     return asset.myInfo;
 }
 
 AssetInfo GetCharBitmap(char aCharCode)
 {
-    for(int i = 0; i < ourAssetStorage.myAssets.myCount; ++i)
+    for(int i = 0; i < ourAssets.myDebugFont.myBitmaps.myCount; ++i)
     {
-        const Asset& asset = ourAssetStorage.myAssets[i];
+        const Asset& asset = ourAssets.myDebugFont.myBitmaps[i];
         if(strlen(asset.myIdentifier) == 1 && asset.myIdentifier[0] == aCharCode)
             return asset.myInfo;
     }
     
-    DE_File fontFile = DE_ReadEntireFile("c:/Windows/Fonts/arial.ttf");
-    
-    stbtt_fontinfo font;
-    
-    const unsigned char* fontBuffer = (unsigned char*)fontFile.myContents;
-    stbtt_InitFont(&font, fontBuffer, stbtt_GetFontOffsetForIndex(fontBuffer, 0));
+
+    stbtt_fontinfo& font = ourAssets.myDebugFont.myFont;
+    float scaleFactor = ourAssets.myDebugFont.myScaleFactor;
     
     int width;
     int height;
     int xOffset;
     int yOffset;
-    float fontHeight = 256.f;
-    float scaleFactor =  stbtt_ScaleForPixelHeight(&font, fontHeight);
     unsigned char* bitmap = stbtt_GetCodepointBitmap(
         &font,
         0,
@@ -98,7 +122,7 @@ AssetInfo GetCharBitmap(char aCharCode)
     unsigned int textureID = gfx_CreateTexture(width, height, SINGLE_CHANNEL, bitmap);
     stbtt_FreeBitmap(bitmap, NULL);
     
-    Asset asset;
+    Asset& asset = ArrayAdd(ourAssets.myDebugFont.myBitmaps);
     asset.myIdentifier[0] = aCharCode;
     asset.myIdentifier[1] = '\0';
     asset.myInfo.myTextureID = textureID;
@@ -111,8 +135,7 @@ AssetInfo GetCharBitmap(char aCharCode)
     asset.myInfo.mySize.x = asset.myInfo.myBoundingBox.z - asset.myInfo.myBoundingBox.x;
     asset.myInfo.mySize.y = asset.myInfo.myBoundingBox.w - asset.myInfo.myBoundingBox.y;
     
-    ArrayAdd(ourAssetStorage.myAssets, asset);
-    DE_FreeFile(fontFile);
+    ArrayAdd(ourAssets.myDebugFont.myBitmaps, asset);
     
     return asset.myInfo;
 }

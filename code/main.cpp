@@ -205,6 +205,7 @@ int main(int argc, char** argv)
         gfx_FinishFrame();    
     }
     
+    FreeAssets();
     gfx_Shutdown();
     
     return 0;
