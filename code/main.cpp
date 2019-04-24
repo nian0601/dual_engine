@@ -18,6 +18,7 @@
 #include "common_utils.cpp"
 #include "array.cpp"
 #include "heap.cpp"
+#include "assets.cpp"
 #include "renderer.cpp"
 
 #include "entity.h"
@@ -27,55 +28,13 @@
 #include "mapgenerator.cpp"
 #include "game.cpp"
 
-#define USE_DIRECTX
+//#define USE_DIRECTX
 
 #ifdef USE_DIRECTX
 #include "directx.cpp"
 #else
 #include "opengl.cpp"
 #endif
-
-unsigned int LoadTexture(gfxTextureFormat aTextureFormat, const char* aFilePath)
-{
-    int width, height, nrChannels;
-    unsigned char* data = stbi_load(aFilePath, &width, &height, &nrChannels, 4);
-    ASSERT(data != NULL);
-    
-    unsigned int texture = gfx_CreateTexture(width, height, aTextureFormat, data);
-    
-    stbi_image_free(data);
-    return texture;
-}
-
-unsigned int CreateTextTexture()
-{
-    DE_File fontFile = DE_ReadEntireFile("c:/Windows/Fonts/arial.ttf");
-    
-    stbtt_fontinfo font;
-    
-    const unsigned char* fontBuffer = (unsigned char*)fontFile.myContents;
-    stbtt_InitFont(&font, fontBuffer, stbtt_GetFontOffsetForIndex(fontBuffer, 0));
-    
-    int width;
-    int height;
-    int xOffset;
-    int yOffset;
-    float fontHeight = 64.f;
-    unsigned char* bitmap = stbtt_GetCodepointBitmap(
-        &font,
-        0,
-        stbtt_ScaleForPixelHeight(&font, fontHeight), 
-        'B',
-        &width, 
-        &height,
-        &xOffset,
-        &yOffset);
-
-    unsigned int textureID = gfx_CreateTexture(width, height, SINGLE_CHANNEL, bitmap);
-    stbtt_FreeBitmap(bitmap, NULL);
-    
-    return textureID;
-}
 
 LRESULT CALLBACK WndProc(HWND aHwnd, UINT aMessage, WPARAM aWParam, LPARAM aLParam)
 {
@@ -175,12 +134,7 @@ int main(int argc, char** argv)
     
     RECT clientArea;
     ASSERT(GetClientRect(windowHandle, &clientArea) != 0);
-    
-    
-    unsigned int texture0 = LoadTexture(RGB, "container.jpg");
-    unsigned int texture1  = LoadTexture(RGBA, "awesomeface.png");
-    unsigned int fontTexture = CreateTextTexture();
-    
+        
     gfx_Viewport(0, 0, windowWidth, windowHeight);
     gfx_ClearColor(0.5f, 0.2f, 0.1f);
     
@@ -206,8 +160,13 @@ int main(int argc, char** argv)
     
     DE_Timer frameTimer = GetTimer();
 
+    SetupAssetStorage();
     SetupRenderer();
     SetupGame();
+    
+    AssetInfo texture0 = GetBitmap("container.jpg");
+    //AssetInfo texture0 = GetBitmap("awesomeface.png");
+    
     
     while(isRunning)
     {
@@ -235,8 +194,12 @@ int main(int argc, char** argv)
         
         gfx_Clear();
         
-        QueueQuad(texture0, {200.f, 200.f}, {50.f, 50.f});
-        QueueQuad(fontTexture, {300.f, 300.f}, {50.f, 50.f});
+        QueueQuad(texture0.myTextureID, {200.f, 200.f}, texture0.mySize);
+       
+        QueueText({100.f, 300.f}, "TestSomeMore");
+        QueueText({100.f, 500.f}, "WithSomeMore");
+        QueueText({100.f, 700.f}, "ABCDEFGHIJKLMNOP");
+        QueueText({100.f, 900.f}, "abcdefghijklmnop");
         
         PushRendererData();
         gfx_FinishFrame();    

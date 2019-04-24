@@ -51,6 +51,18 @@ void ArrayAdd(GrowingArray<T>& anArray, const T& anItem)
 }
 
 template <typename T>
+T& ArrayAdd(GrowingArray<T>& anArray)
+{
+    if(anArray.myCount >= anArray.myMaxCount - 1)
+        ArrayAlloc(anArray, anArray.myMaxCount * 2);
+    
+    anArray.myData[anArray.myCount] = {};
+    anArray.myCount++;
+    
+    return anArray.myData[anArray.myCount - 1];
+}
+
+template <typename T>
 void ArrayClear(GrowingArray<T>& anArray)
 {
     anArray.myCount = 0;

@@ -45,6 +45,24 @@ void QueueQuad(int aTextureID, const Vector2f& aPosition, const Vector2f& aSize)
     ArrayAdd(ourRenderContext.myQuads, {aTextureID, aPosition, aSize});
 }
 
+void QueueText(const Vector2f& aPosition, const char* aString)
+{
+    AssetInfo assetInfo;
+    
+    Vector2f currentPoint = aPosition;
+    Vector2f tempPoint = currentPoint;
+    int length = strlen(aString);
+    for(int i = 0; i < length; ++i)
+    {
+        assetInfo = GetCharBitmap(aString[i]);
+        tempPoint.y -= assetInfo.myBoundingBox.w;
+        QueueQuad(assetInfo.myTextureID, tempPoint, assetInfo.mySize);
+        
+        currentPoint.x += assetInfo.myAdvance;
+        tempPoint = currentPoint;
+    }
+}
+
 void PushRendererData()
 {
     gfx_Begin3D();

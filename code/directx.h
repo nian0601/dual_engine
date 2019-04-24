@@ -92,10 +92,7 @@ struct DX_context
     DX_renderobject myQuad;
     GrowingArray<DX_quadData> myQuadList;
     
-    DX_texture myTextures[16];
-    unsigned int myNextTextureID;
-    
-    
+    GrowingArray<DX_texture> myTextures;
 
     DX_constantBuffer myConstantBuffer;
     DX_3dConstants my3DConstants;

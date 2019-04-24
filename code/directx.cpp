@@ -560,9 +560,7 @@ void DX_UpdateAndSetConstantBuffer(DX_constantBuffer& aBuffer, void* someData, u
 }
 
 void gfx_Init(HWND aWindowHandle, int aWindowWidth, int aWindowHeight)
-{
-    ourDirectXContext.myNextTextureID = 0;
-    
+{    
     DX_CreateSwapChain(aWindowHandle, aWindowWidth, aWindowHeight);
     DX_CreateBackbuffer();
     DX_CreateDepthBuffer(aWindowWidth, aWindowHeight);
@@ -587,6 +585,7 @@ void gfx_Init(HWND aWindowHandle, int aWindowWidth, int aWindowHeight)
     
     ArrayAlloc(ourDirectXContext.myModelList, 12);
     ArrayAlloc(ourDirectXContext.myQuadList, 12);
+    ArrayAlloc(ourDirectXContext.myTextures, 16);
     
     ourDirectXContext.myCamera = NULL;
 }
@@ -644,9 +643,7 @@ void gfx_FinishFrame()
 }
 
 unsigned int gfx_CreateTexture(int aWidth, int aHeight, gfxTextureFormat aTextureFormat, void* someTextureData)
-{
-    ASSERT(ourDirectXContext.myNextTextureID < 16);
-    
+{    
     D3D11_TEXTURE2D_DESC textureDesc = {};
     textureDesc.Width = aWidth;
     textureDesc.Height = aHeight;
@@ -674,8 +671,7 @@ unsigned int gfx_CreateTexture(int aWidth, int aHeight, gfxTextureFormat aTextur
         textureData.SysMemPitch = sizeof(unsigned char) * 4  * aWidth;
     textureData.SysMemSlicePitch = 0;
     
-    DX_texture& texture = ourDirectXContext.myTextures[ourDirectXContext.myNextTextureID];
-    
+    DX_texture& texture = ArrayAdd(ourDirectXContext.myTextures);
     HRESULT result = ourDirectXContext.myDevice->CreateTexture2D(
         &textureDesc,
         &textureData,
@@ -688,7 +684,7 @@ unsigned int gfx_CreateTexture(int aWidth, int aHeight, gfxTextureFormat aTextur
         &texture.myShaderResource);
     ASSERT(result == S_OK);
     
-    return ourDirectXContext.myNextTextureID++;
+    return ourDirectXContext.myTextures.myCount - 1;
 }
 
 void gfx_SetCamera(gfx_camera* aCamera)
@@ -699,7 +695,6 @@ void gfx_SetCamera(gfx_camera* aCamera)
 void gfx_DrawQuad(unsigned int aTextureID, float aX, float aY, float aWidth, float aHeight)
 {
     ASSERT(ourDirectXContext.myCamera != NULL);
-    ASSERT(aTextureID < 16);
     
     Vector2f& screenSize = ourDirectXContext.myCamera->myScreenSize;
     

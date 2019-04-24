@@ -239,7 +239,7 @@ void OpenGL_CreateQuad()
     float size = 0.5f;
     float vertices[] = {
         // position         // colors            //UVs
-         size,  size, 0.f,   1.f,  0.f,  0.f,    1.f, 0.0f,  // topright
+         size,  size, 0.f,   1.f,  0.f,  0.f,    1.f, 0.f,  // topright
          size, -size, 0.f,   0.f,  1.f,  0.f,    1.f, 1.f,   // bottomright
         -size, -size, 0.f,   0.f,  0.f,  1.f,    0.f, 1.f,   // bottomleft
         -size,  size, 0.f,   0.2f, 0.2f, 0.2f,   0.f, 0.f     // topleft
@@ -349,6 +349,7 @@ unsigned int gfx_CreateTexture(int aWidth, int aHeight, gfxTextureFormat aTextur
         format = GL_RED;
     
     glTexImage2D(GL_TEXTURE_2D, 0, format, aWidth, aHeight, 0, format, GL_UNSIGNED_BYTE, someTextureData);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     
     return texture;
 }
@@ -403,7 +404,7 @@ void gfx_Begin2D()
     ourOpenGL_Context.mySizeLocation = glGetUniformLocation(ourOpenGL_Context.myActiveShader, "Size");
     ourOpenGL_Context.myTextureLocation = glGetUniformLocation(ourOpenGL_Context.myActiveShader, "AlbedoTexture");
     
-    glUniform1i(textureLocation, 0);
+    glUniform1i(ourOpenGL_Context.myTextureLocation, 0);
 }
 
 void gfx_Begin3D()
