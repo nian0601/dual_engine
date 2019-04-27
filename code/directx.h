@@ -8,6 +8,7 @@ struct DX_quadData
 {
     Vector2f myPosition;
     Vector2f mySize;
+    Vector4f myColor;
     unsigned int myTextureID;
 };
 
@@ -89,8 +90,8 @@ struct DX_context
     float myClearColor[4];
     
     DX_shader myQuadShader;
+    DX_shader myTextShader;
     DX_renderobject myQuad;
-    GrowingArray<DX_quadData> myQuadList;
     
     GrowingArray<DX_texture> myTextures;
 
@@ -100,7 +101,6 @@ struct DX_context
     
     DX_shader myCubeShader;
     DX_renderobject myCube;
-    GrowingArray<DX_modelData> myModelList;
     
     ID3D11SamplerState* mySamplerState;
     ID3D11RasterizerState* myRasterizerState;

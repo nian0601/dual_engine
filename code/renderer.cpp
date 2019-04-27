@@ -1,8 +1,10 @@
 struct QuadData
 {
-    int myTextureID;
+    unsigned int myTextureID;
     Vector2f myPosition;
     Vector2f mySize;
+    Vector4f myColor;
+    bool myIsText;
 };
 
 struct CubeData
@@ -40,9 +42,9 @@ void QueueCube(const Vector3f& aPosition, const Vector4f& aColor)
     ArrayAdd(ourRenderContext.myCubes, {aPosition, {1.f, 1.f, 1.f}, aColor});
 }
 
-void QueueQuad(int aTextureID, const Vector2f& aPosition, const Vector2f& aSize)
+void QueueQuad(unsigned int aTextureID, const Vector2f& aPosition, const Vector2f& aSize)
 {
-    ArrayAdd(ourRenderContext.myQuads, {aTextureID, aPosition, aSize});
+    ArrayAdd(ourRenderContext.myQuads, {aTextureID, aPosition, aSize, {1.f, 1.f, 1.f, 1.f}, false});
 }
 
 void QueueText(const Vector2f& aPosition, const char* aString)
@@ -56,7 +58,13 @@ void QueueText(const Vector2f& aPosition, const char* aString)
     {
         assetInfo = GetCharBitmap(aString[i]);
         tempPoint.y -= assetInfo.myBoundingBox.w;
-        QueueQuad(assetInfo.myTextureID, tempPoint, assetInfo.mySize);
+        
+        ArrayAdd(ourRenderContext.myQuads, {assetInfo.myTextureID, tempPoint, assetInfo.mySize, {0.f, 0.f, 0.f, 1.f}, true});
+        
+        tempPoint.y += 4.f;
+        tempPoint.x -= 4.f;
+        
+        ArrayAdd(ourRenderContext.myQuads, {assetInfo.myTextureID, tempPoint, assetInfo.mySize, {1.f, 1.f, 1.f, 1.f}, true});
         
         currentPoint.x += assetInfo.myAdvance;
         tempPoint = currentPoint;
@@ -78,17 +86,21 @@ void PushRendererData()
     
     ArrayClear(ourRenderContext.myCubes);
     
-    gfx_Begin2D();
-    
     for(int i = 0; i < ourRenderContext.myQuads.myCount; ++i)
     {
         const QuadData& data = ourRenderContext.myQuads[i];
+        if(data.myIsText)
+            gfx_BeginText();
+        else
+            gfx_Begin2D();
+        
         gfx_DrawQuad(
             data.myTextureID,
             data.myPosition.x,
             data.myPosition.y,
             data.mySize.x,
-            data.mySize.y);
+            data.mySize.y,
+            data.myColor);
     }
     
     ArrayClear(ourRenderContext.myQuads);

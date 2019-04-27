@@ -581,10 +581,9 @@ void gfx_Init(HWND aWindowHandle, int aWindowWidth, int aWindowHeight)
     DX_CreateConstantBuffer(ourDirectXContext.myConstantBuffer);
     
     DX_CreateShader(ourDirectXContext.myQuadShader, true, "quad.vx", "quad.px");
+    DX_CreateShader(ourDirectXContext.myTextShader, true, "text.vx", "text.px");
     DX_CreateShader(ourDirectXContext.myCubeShader, false, "cube.vx", "cube.px");
     
-    ArrayAlloc(ourDirectXContext.myModelList, 12);
-    ArrayAlloc(ourDirectXContext.myQuadList, 12);
     ArrayAlloc(ourDirectXContext.myTextures, 16);
     
     ourDirectXContext.myCamera = NULL;
@@ -692,7 +691,7 @@ void gfx_SetCamera(gfx_camera* aCamera)
     ourDirectXContext.myCamera = aCamera;
 }
 
-void gfx_DrawQuad(unsigned int aTextureID, float aX, float aY, float aWidth, float aHeight)
+void gfx_DrawQuad(unsigned int aTextureID, float aX, float aY, float aWidth, float aHeight, const Vector4f& aColor)
 {
     ASSERT(ourDirectXContext.myCamera != NULL);
     
@@ -703,7 +702,7 @@ void gfx_DrawQuad(unsigned int aTextureID, float aX, float aY, float aWidth, flo
     float normalizedWidth = aWidth / screenSize.x;
     float normalizedHeight = aHeight / screenSize.y;
     
-    DX_quadData data = {{normalizedX, normalizedY}, {normalizedWidth, normalizedHeight}};
+    DX_quadData data = {{normalizedX, normalizedY}, {normalizedWidth, normalizedHeight}, aColor};
     
     DX_UpdateAndSetConstantBuffer(
         ourDirectXContext.myQuad.myConstantBuffer, 
@@ -726,6 +725,33 @@ void gfx_Begin2D()
     dxContext->VSSetShader(ourDirectXContext.myQuadShader.myVertexShader, 0, 0);
     dxContext->PSSetShader(ourDirectXContext.myQuadShader.myPixelShader, 0, 0);
     dxContext->IASetInputLayout(ourDirectXContext.myQuadShader.myInputLayout);
+    dxContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    
+    
+    UINT stride = sizeof(DX_quadVertex);
+    UINT offset = 0;
+    
+    dxContext->IASetVertexBuffers(
+        0, 
+        1, 
+        &ourDirectXContext.myQuad.myVertexBuffer, 
+        &stride, 
+        &offset);
+    
+    dxContext->IASetIndexBuffer(
+        ourDirectXContext.myQuad.myIndexBuffer, 
+        DXGI_FORMAT_R32_UINT, 
+        0);
+}
+
+void gfx_BeginText()
+{   
+    ID3D11DeviceContext* dxContext = ourDirectXContext.myContext;
+    dxContext->OMSetDepthStencilState(ourDirectXContext.myDepthStates[NO_READ_NO_WRITE], 1);
+    dxContext->OMSetBlendState(ourDirectXContext.myBlendStates[ALPHA_BLEND], NULL, 0xFFFFFFFF);
+    dxContext->VSSetShader(ourDirectXContext.myTextShader.myVertexShader, 0, 0);
+    dxContext->PSSetShader(ourDirectXContext.myTextShader.myPixelShader, 0, 0);
+    dxContext->IASetInputLayout(ourDirectXContext.myTextShader.myInputLayout);
     dxContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     
     

@@ -28,7 +28,7 @@
 #include "mapgenerator.cpp"
 #include "game.cpp"
 
-//#define USE_DIRECTX
+#define USE_DIRECTX
 
 #ifdef USE_DIRECTX
 #include "directx.cpp"

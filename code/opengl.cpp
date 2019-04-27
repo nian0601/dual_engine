@@ -24,6 +24,7 @@ struct OpenGL_context
     
     unsigned int myQuadShader;
     unsigned int myCubeShader;
+    unsigned int myTextShader;
     
     int myPositionLocation;
     int mySizeLocation;
@@ -305,6 +306,8 @@ void gfx_Init(HWND aWindowHandle, int aWindowHeight, int aWindowWidth)
     
     ourOpenGL_Context.myQuadShader = OpenGL_CreateShader("quad.vx", "quad.px");
     ourOpenGL_Context.myCubeShader = OpenGL_CreateShader("cube.vx", "cube.px");
+    ourOpenGL_Context.myTextShader = OpenGL_CreateShader("text.vx", "text.px");
+    ourOpenGL_Context.myActiveShader = -1;
     
     ourOpenGL_Context.myCamera = NULL;
 }
@@ -359,7 +362,7 @@ void gfx_SetCamera(gfx_camera* aCamera)
     ourOpenGL_Context.myCamera = aCamera;
 }
 
-void gfx_DrawQuad(unsigned int aTextureID, float aX, float aY, float aWidth, float aHeight)
+void gfx_DrawQuad(unsigned int aTextureID, float aX, float aY, float aWidth, float aHeight, const Vector4f& aColor)
 {
     ASSERT(ourOpenGL_Context.myCamera != NULL);
     
@@ -373,6 +376,9 @@ void gfx_DrawQuad(unsigned int aTextureID, float aX, float aY, float aWidth, flo
     glBindTexture(GL_TEXTURE_2D, aTextureID);
     glUniform2f(ourOpenGL_Context.myPositionLocation, normalizedX, normalizedY);
     glUniform2f(ourOpenGL_Context.mySizeLocation, normalizedWidth, normalizedHeight);
+    
+    int colorLocation = glGetUniformLocation(ourOpenGL_Context.myActiveShader, "Color");
+    glUniform4f(colorLocation, aColor.x, aColor.y, aColor.z, aColor.w);
     
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 }
@@ -390,12 +396,15 @@ void gfx_DrawCube(const Matrix& aTransform, const Vector4f& aColor)
 
 void gfx_Begin2D()
 {
+    if(ourOpenGL_Context.myActiveShader == ourOpenGL_Context.myQuadShader)
+        return;
+    
+    ourOpenGL_Context.myActiveShader = ourOpenGL_Context.myQuadShader;
+    glUseProgram(ourOpenGL_Context.myActiveShader);
+    
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    
-    glUseProgram(ourOpenGL_Context.myQuadShader);
-    ourOpenGL_Context.myActiveShader = ourOpenGL_Context.myQuadShader;
     
     glActiveTexture(GL_TEXTURE0);
     glBindVertexArray(ourOpenGL_Context.myQuad.myVertexArrayObject);
@@ -409,14 +418,17 @@ void gfx_Begin2D()
 
 void gfx_Begin3D()
 {
+    if(ourOpenGL_Context.myActiveShader == ourOpenGL_Context.myCubeShader)
+        return;
+
+    ourOpenGL_Context.myActiveShader = ourOpenGL_Context.myCubeShader;
+    glUseProgram(ourOpenGL_Context.myActiveShader);
+    
     glEnable(GL_DEPTH_TEST);
     glDisable(GL_BLEND);
-    
+
     ASSERT(ourOpenGL_Context.myCamera != NULL);
     gfx_camera& camera = *ourOpenGL_Context.myCamera;
-   
-    glUseProgram(ourOpenGL_Context.myCubeShader);
-    ourOpenGL_Context.myActiveShader = ourOpenGL_Context.myCubeShader;
     
     int projectionLocation = glGetUniformLocation(ourOpenGL_Context.myActiveShader, "Projection");
     glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, camera.myProjection.myData);
@@ -425,4 +437,26 @@ void gfx_Begin3D()
     glUniformMatrix4fv(viewLocation, 1, GL_FALSE, camera.myInvertedView.myData);
     
     glBindVertexArray(ourOpenGL_Context.myCube.myVertexArrayObject);
+}
+
+void gfx_BeginText()
+{
+    if(ourOpenGL_Context.myActiveShader == ourOpenGL_Context.myTextShader)
+        return;
+    
+    ourOpenGL_Context.myActiveShader = ourOpenGL_Context.myTextShader;
+    glUseProgram(ourOpenGL_Context.myActiveShader);
+    
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    
+    glActiveTexture(GL_TEXTURE0);
+    glBindVertexArray(ourOpenGL_Context.myQuad.myVertexArrayObject);
+    
+    ourOpenGL_Context.myPositionLocation = glGetUniformLocation(ourOpenGL_Context.myActiveShader, "Position");
+    ourOpenGL_Context.mySizeLocation = glGetUniformLocation(ourOpenGL_Context.myActiveShader, "Size");
+    ourOpenGL_Context.myTextureLocation = glGetUniformLocation(ourOpenGL_Context.myActiveShader, "AlbedoTexture");
+    
+    glUniform1i(ourOpenGL_Context.myTextureLocation, 0);
 }

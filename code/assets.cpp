@@ -39,7 +39,7 @@ void SetupDebugFont()
     const unsigned char* fontBuffer = (unsigned char*)asset.myFile.myContents;
     stbtt_InitFont(&asset.myFont, fontBuffer, stbtt_GetFontOffsetForIndex(fontBuffer, 0));
     
-    float fontHeight = 256.f;
+    float fontHeight = 64.f;
     asset.myScaleFactor = stbtt_ScaleForPixelHeight(&asset.myFont, fontHeight);
     
     ArrayAlloc(asset.myBitmaps, 16);

@@ -25,8 +25,9 @@ unsigned int gfx_CreateTexture(int aWidth, int aHeight, gfxTextureFormat aTextur
 
 void gfx_SetCamera(gfx_camera* aCamera);
 
-void gfx_DrawQuad(unsigned int aTextureID, float aX, float aY, float aWidth, float aHeight);
+void gfx_DrawQuad(unsigned int aTextureID, float aX, float aY, float aWidth, float aHeight, const Vector4f& aColor);
 void gfx_DrawCube(const Matrix& aTransform, const Vector4f& aColor);
 
 void gfx_Begin2D();
 void gfx_Begin3D();
+void gfx_BeginText();
