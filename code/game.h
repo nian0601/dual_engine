@@ -2,6 +2,8 @@
 #define CELLCOUNT GRIDSIZE * GRIDSIZE
 #define CELLSIZE 1
 
+#include "voxel.h"
+
 enum TileType
 {
     GRASS,
@@ -55,5 +57,7 @@ struct GameState
     Path myPlayerPath;
     
     Entity* myEntityUnderMouse;
+    
+    World myWorld;
 };
 static GameState ourGameState;

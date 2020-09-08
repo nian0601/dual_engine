@@ -27,14 +27,9 @@
 #include "game.h"
 #include "mapgenerator.cpp"
 #include "game.cpp"
+#include "voxel.cpp"
 
-#define USE_DIRECTX
-
-#ifdef USE_DIRECTX
-#include "directx.cpp"
-#else
 #include "opengl.cpp"
-#endif
 
 LRESULT CALLBACK WndProc(HWND aHwnd, UINT aMessage, WPARAM aWParam, LPARAM aLParam)
 {
@@ -120,11 +115,7 @@ HWND Win32CreateWindow(const char* aTitle, int aWindowWidth, int aWindowHeight)
 
 int main(int argc, char** argv)
 {
-    #ifdef USE_DIRECTX
-    const char* windowTitle = "Dual Engine (DirectX)";
-    #else
-    const char* windowTitle = "Dual Engine (OpenGL)";
-    #endif
+    const char* windowTitle = "Voxel Engine";
     
     const int windowWidth = 1280;
     const int windowHeight = 720;
@@ -163,6 +154,7 @@ int main(int argc, char** argv)
     SetupAssetStorage();
     SetupRenderer();
     SetupGame();
+    CreateWorld();
     
     AssetInfo texture0 = GetBitmap("container.jpg");
     //AssetInfo texture0 = GetBitmap("awesomeface.png");
@@ -189,17 +181,21 @@ int main(int argc, char** argv)
         
         
         UpdateCamera(deltaTime, myCamera);        
-        UpdateAndRenderGame(deltaTime);
+        //UpdateAndRenderGame(deltaTime);
+        
+        RenderWorld();
         
         
         gfx_Clear();
         
+        /*
         QueueQuad(texture0.myTextureID, {200.f, 200.f}, texture0.mySize);
        
         QueueText({100.f, 300.f}, "TestSomeMore");
         QueueText({100.f, 500.f}, "WithSomeMore");
         QueueText({100.f, 700.f}, "ABCDEFGHIJKLMNOP");
         QueueText({100.f, 900.f}, "abcdefghijklmnop");
+        */
         
         PushRendererData();
         gfx_FinishFrame();    
