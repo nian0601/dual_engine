@@ -39,6 +39,17 @@ void UpdateCamera(float aDeltaTime, gfx_camera& aCamera)
     if(KeyDown(DEK_E))
         TranslateUp(viewMatrix, movement);
     
+    if(MouseDown(DEK_RIGHTMOUSE))
+    {
+        if(Length(ourInput.myMouseDelta) > 0.f)
+        {
+            float rotationSpeed = 3.14f * 0.1f * aDeltaTime;
+            RotateX(aCamera.myView, rotationSpeed * ourInput.myMouseDelta.y);
+            RotateY(aCamera.myView, rotationSpeed * ourInput.myMouseDelta.x);
+        }
+    }
+    
+    
     aCamera.myInvertedView = InverseSimple(aCamera.myView);
     ourInput.myMouseRay.myStart = Unproject(
         ourInput.myMousePosition, 0.f, aCamera.myInvertedView, aCamera.myProjection, aCamera.myWindowSize);

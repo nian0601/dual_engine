@@ -16,9 +16,10 @@ struct Chunk
 {
     Block*** myBlocks;
     Vector3f myPosition;
+    int myMeshID;
 };
 
-static const int WorldSize = 2;
+static const int WorldSize = 4;
 struct World
 {
     Chunk*** myChunks;

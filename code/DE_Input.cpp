@@ -47,6 +47,7 @@ struct DE_Input
     bool myMouseState[DEK_MOUSECOUNT];
     bool myPrevMouseState[DEK_MOUSECOUNT];
     Vector2f myMousePosition;
+    Vector2f myMouseDelta;
     DE_Ray myMouseRay;
 };
 
@@ -69,8 +70,12 @@ void OnInputMessage(WPARAM aWParam, LPARAM aLParam)
         {
             if (ScreenToClient(ourInput.myWindowHandle, &p))
             {
+                Vector2f prevPosition = ourInput.myMousePosition;
                 ourInput.myMousePosition.x = p.x;
                 ourInput.myMousePosition.y = p.y;
+                
+                ourInput.myMouseDelta = (ourInput.myMousePosition - prevPosition);
+                //Normalize(ourInput.myMouseDelta);
             }
         }
         

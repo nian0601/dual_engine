@@ -3,8 +3,9 @@
 
 struct OpenGL_cubeVertex
 {
-    Vector4f pos;
-    Vector4f norm;
+    Vector4f myPosition;
+    Vector4f myNormal;
+    Vector4f myColor;
 };
 
 struct OpenGL_renderobject
@@ -12,10 +13,15 @@ struct OpenGL_renderobject
     unsigned int myVertexArrayObject;
     unsigned int myVertexBufferObject;
     unsigned int myElementBufferObject;
+    
+    GrowingArray<OpenGL_cubeVertex> myVertices;
+    GrowingArray<int> myIndices;
 };
 
 struct OpenGL_context
 {
+    GrowingArray<OpenGL_renderobject> myMeshes;
+    
     OpenGL_renderobject myQuad;
     OpenGL_renderobject myCube;
     
@@ -96,137 +102,8 @@ unsigned int OpenGL_CreateShader(const char* aVertexName, const char* aPixelName
 
 void OpenGL_CreateCube()
 {
-    // Create our Vertices
-    float width = 0.5f;
-    float height = 0.5f;
-    float depth = 0.5f;
-    
-    Vector4f up = {0.f, 1.f, 0.f, 0.f};
-    Vector4f down = {0.f, -1.f, 0.f, 0.f};
-    
-    Vector4f left = {-1.f, 0.f, 0.f, 0.f};
-    Vector4f right = {1.f, 0.f, 0.f, 0.f};
-    
-    Vector4f forward = {0.f, 0.f, 1.f, 0.f};
-    Vector4f back = {0.f, 0.f, -1.f, 0.f};
-    
-    OpenGL_cubeVertex vertices[24];
-    //0 - 3 (Top)
-	vertices[0] = { -width, height, -depth, 1.f, up };
-	vertices[1] = { width, height, -depth, 1.f, up };
-	vertices[2] = { width, height, depth, 1.f, up };
-	vertices[3] = { -width, height, depth, 1.f, up };
-
-	//4 - 7 (Bottom)
-	vertices[4] = { -width, -height, -depth, 1.f, down };
-	vertices[5] = { width, -height, -depth, 1.f, down };
-	vertices[6] = { width, -height, depth, 1.f, down };
-	vertices[7] = { -width, -height, depth, 1.f, down };
-
-	//8 - 11 (Left)
-	vertices[8] = { -width, -height, depth, 1.f, left };
-	vertices[9] = { -width, -height, -depth, 1.f, left };
-	vertices[10] = { -width, height, -depth, 1.f, left };
-	vertices[11] = { -width, height, depth, 1.f, left };
-
-	//12 - 15 (Right)
-	vertices[12] = { width, -height, depth, 1.f, right };
-	vertices[13] = { width, -height, -depth, 1.f, right };
-	vertices[14] = { width, height, -depth, 1.f, right };
-	vertices[15] = { width, height, depth, 1.f, right };
-
-	//16 - 19 (Front)
-	vertices[16] = { -width, -height, -depth, 1.f, forward };
-	vertices[17] = { width, -height, -depth, 1.f, forward };
-	vertices[18] = { width, height, -depth, 1.f, forward };
-	vertices[19] = { -width, height, -depth, 1.f, forward };
-
-	//20 - 23 (Back)
-	vertices[20] = { -width, -height, depth, 1.f, back };
-	vertices[21] = { width, -height, depth, 1.f, back };
-	vertices[22] = { width, height, depth, 1.f, back };
-	vertices[23] = { -width, height, depth, 1.f, back };
-    
-	DWORD indices[36];
-	//Top
-	indices[0] = 3;
-	indices[1] = 1;
-	indices[2] = 0;
-
-	indices[3] = 2;
-	indices[4] = 1;
-	indices[5] = 3;
-
-	//Bottom
-	indices[6] = 6;
-	indices[7] = 4;
-	indices[8] = 5;
-
-	indices[9] = 7;
-	indices[10] = 4;
-	indices[11] = 6;
-
-	//Left
-	indices[12] = 11;
-	indices[13] = 9;
-	indices[14] = 8;
-
-	indices[15] = 10;
-	indices[16] = 9;
-	indices[17] = 11;
-
-	//Right
-	indices[18] = 14;
-	indices[19] = 12;
-	indices[20] = 13;
-
-	indices[21] = 15;
-	indices[22] = 12;
-	indices[23] = 14;
-
-	//Front
-	indices[24] = 19;
-	indices[25] = 17;
-	indices[26] = 16;
-
-	indices[27] = 18;
-	indices[28] = 17;
-	indices[29] = 19;
-
-	//Back
-	indices[30] = 22;
-	indices[31] = 20;
-	indices[32] = 21;
-
-	indices[33] = 23;
-	indices[34] = 20;
-
- 
-    OpenGL_renderobject cube = {};
-    
-    glGenVertexArrays(1, &cube.myVertexArrayObject);
-    glBindVertexArray(cube.myVertexArrayObject);
-    
-    
-    // Create a VertexBuffer
-    glGenBuffers(1, &cube.myVertexBufferObject);
-    glBindBuffer(GL_ARRAY_BUFFER, cube.myVertexBufferObject);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    
-    // Create a IndexBuffer
-    glGenBuffers(1, &cube.myElementBufferObject);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, cube.myElementBufferObject);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
- 
-    
-    // Setup VertexAttributes (input-layout)
-    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    
-    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(4 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    
-    ourOpenGL_Context.myCube = cube;
+    int meshID = gfx_CreateCubeMesh(0.f, 0.f, 0.f, 1.f, 1.f, 1.f);
+    ourOpenGL_Context.myCube = ourOpenGL_Context.myMeshes[meshID];
 }
 
 void OpenGL_CreateQuad()
@@ -300,6 +177,8 @@ void gfx_Init(HWND aWindowHandle, int aWindowHeight, int aWindowWidth)
     
     result = gl_lite_init();
     ASSERT(result == true);
+    
+    ArrayAlloc(ourOpenGL_Context.myMeshes, 16);
     
     OpenGL_CreateQuad();
     OpenGL_CreateCube();
@@ -385,13 +264,33 @@ void gfx_DrawQuad(unsigned int aTextureID, float aX, float aY, float aWidth, flo
 
 void gfx_DrawCube(const Matrix& aTransform, const Vector4f& aColor)
 {   
+    glBindVertexArray(ourOpenGL_Context.myCube.myVertexArrayObject);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ourOpenGL_Context.myCube.myElementBufferObject);
+    
     int worldLocation = glGetUniformLocation(ourOpenGL_Context.myActiveShader, "World");
     glUniformMatrix4fv(worldLocation, 1, GL_FALSE, aTransform.myData);
     
     int colorAndMetalness = glGetUniformLocation(ourOpenGL_Context.myActiveShader, "ColorAndMetalnessIn");
     glUniform4f(colorAndMetalness, aColor.x, aColor.y, aColor.z, aColor.w);
     
-    glDrawElements(GL_TRIANGLES, 32, GL_UNSIGNED_INT, 0);    
+    glDrawElements(GL_TRIANGLES, 32, GL_UNSIGNED_INT, 0);
+}
+
+void gfx_DrawMesh(int aMeshID, const Matrix& aTransform)
+{
+    int worldLocation = glGetUniformLocation(ourOpenGL_Context.myActiveShader, "World");
+    glUniformMatrix4fv(worldLocation, 1, GL_FALSE, aTransform.myData);
+    
+    int colorAndMetalness = glGetUniformLocation(ourOpenGL_Context.myActiveShader, "ColorAndMetalnessIn");
+    glUniform4f(colorAndMetalness, 1.f, 1.f, 1.f, 1.f);
+    
+    OpenGL_renderobject& mesh = ourOpenGL_Context.myMeshes[aMeshID];
+    
+    glBindBuffer(GL_ARRAY_BUFFER, mesh.myVertexBufferObject);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.myElementBufferObject);
+    glBindVertexArray(mesh.myVertexArrayObject);
+    
+    glDrawElements(GL_TRIANGLES, mesh.myIndices.myCount, GL_UNSIGNED_INT, 0);
 }
 
 void gfx_Begin2D()
@@ -418,11 +317,11 @@ void gfx_Begin2D()
 
 void gfx_Begin3D()
 {
-    if(ourOpenGL_Context.myActiveShader == ourOpenGL_Context.myCubeShader)
-        return;
-
-    ourOpenGL_Context.myActiveShader = ourOpenGL_Context.myCubeShader;
-    glUseProgram(ourOpenGL_Context.myActiveShader);
+    if(ourOpenGL_Context.myActiveShader != ourOpenGL_Context.myCubeShader)
+    {
+        ourOpenGL_Context.myActiveShader = ourOpenGL_Context.myCubeShader;
+        glUseProgram(ourOpenGL_Context.myActiveShader);
+    }
     
     glEnable(GL_DEPTH_TEST);
     glDisable(GL_BLEND);
@@ -435,8 +334,6 @@ void gfx_Begin3D()
     
     int viewLocation = glGetUniformLocation(ourOpenGL_Context.myActiveShader, "View");
     glUniformMatrix4fv(viewLocation, 1, GL_FALSE, camera.myInvertedView.myData);
-    
-    glBindVertexArray(ourOpenGL_Context.myCube.myVertexArrayObject);
 }
 
 void gfx_BeginText()
@@ -459,4 +356,151 @@ void gfx_BeginText()
     ourOpenGL_Context.myTextureLocation = glGetUniformLocation(ourOpenGL_Context.myActiveShader, "AlbedoTexture");
     
     glUniform1i(ourOpenGL_Context.myTextureLocation, 0);
+}
+
+int gfx_CreateMesh()
+{
+    OpenGL_renderobject& mesh = ArrayAdd(ourOpenGL_Context.myMeshes);
+    ArrayAlloc(mesh.myVertices, 24);
+    ArrayAlloc(mesh.myIndices, 32);
+    
+    return ourOpenGL_Context.myMeshes.myCount - 1;
+}
+
+int gfx_AddVertexToMesh(int aMeshID, const Vector4f& aPosition, const Vector4f& aNormal, const Vector4f& aColor)
+{
+    OpenGL_renderobject& mesh = ourOpenGL_Context.myMeshes[aMeshID];
+    OpenGL_cubeVertex& vertex = ArrayAdd(mesh.myVertices);
+    
+    vertex.myPosition = aPosition;
+    vertex.myNormal = aNormal;
+    vertex.myColor = aColor;
+    
+    return mesh.myVertices.myCount - 1;
+}
+
+void gfx_AddTriangleToMesh(int aMeshID, int aFirstVertexIndex, int aSecondVertexIndex, int aThirdVertexIndex)
+{
+    OpenGL_renderobject& mesh = ourOpenGL_Context.myMeshes[aMeshID];
+    ArrayAdd(mesh.myIndices, aFirstVertexIndex);
+    ArrayAdd(mesh.myIndices, aSecondVertexIndex);
+    ArrayAdd(mesh.myIndices, aThirdVertexIndex);
+}
+
+void gfx_FinishMesh(int aMeshID)
+{
+    OpenGL_renderobject& mesh = ourOpenGL_Context.myMeshes[aMeshID];
+ 
+    // Setup VertexAttributes (input-layout)
+    glGenVertexArrays(1, &mesh.myVertexArrayObject);
+    glBindVertexArray(mesh.myVertexArrayObject);
+    
+    // Create a VertexBuffer
+    glGenBuffers(1, &mesh.myVertexBufferObject);
+    glBindBuffer(GL_ARRAY_BUFFER, mesh.myVertexBufferObject);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(mesh.myVertices[0]) * mesh.myVertices.myCount, mesh.myVertices.myData, GL_STATIC_DRAW);
+    
+    // Create a IndexBuffer
+    glGenBuffers(1, &mesh.myElementBufferObject);
+    
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.myElementBufferObject);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(mesh.myIndices[0]) * mesh.myIndices.myCount, mesh.myIndices.myData, GL_STATIC_DRAW);
+ 
+    
+ 
+    
+    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 12 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    
+    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 12 * sizeof(float), (void*)(4 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    
+    glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, 12 * sizeof(float), (void*)(8 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+}
+
+int gfx_CreateCubeMesh(float x, float y, float z, float r, float g, float b)
+{
+    int meshID = gfx_CreateMesh();
+    
+    // Create our Vertices
+    float width = 0.5f;
+    float height = 0.5f;
+    float depth = 0.5f;
+    
+    Vector4f p0 = {x - width, y + height, z - depth, 1.f};
+    Vector4f p1 = {x + width, y + height, z - depth, 1.f};
+    Vector4f p2 = {x + width, y + height, z + depth, 1.f};
+    Vector4f p3 = {x - width, y + height, z + depth, 1.f};
+    
+    Vector4f p4 = {x - width, y - height, z - depth, 1.f};
+    Vector4f p5 = {x + width, y - height, z - depth, 1.f};
+    Vector4f p6 = {x + width, y - height, z + depth, 1.f};
+    Vector4f p7 = {x - width, y - height, z + depth, 1.f};
+    
+    Vector4f normal;
+    Vector4f color = {r, g, b, 1.f};
+    
+    //0 - 3 (Top)
+    normal = {0.f, 1.f, 0.f, 0.f};
+    int v0 = gfx_AddVertexToMesh(meshID, p0, normal, color);
+    int v1 = gfx_AddVertexToMesh(meshID, p1, normal, color);
+    int v2 = gfx_AddVertexToMesh(meshID, p2, normal, color);
+    int v3 = gfx_AddVertexToMesh(meshID, p3, normal, color);
+    
+    gfx_AddTriangleToMesh(meshID, v3, v1, v0);
+    gfx_AddTriangleToMesh(meshID, v2, v1, v3);
+    
+	//4 - 7 (Bottom)
+    normal = {0.f, -1.f, 0.f, 0.f};
+    int v4 = gfx_AddVertexToMesh(meshID, p4, normal, color);
+    int v5 = gfx_AddVertexToMesh(meshID, p5, normal, color);
+    int v6 = gfx_AddVertexToMesh(meshID, p6, normal, color);
+    int v7 = gfx_AddVertexToMesh(meshID, p7, normal, color);
+    
+    gfx_AddTriangleToMesh(meshID, v6, v4, v5);
+    gfx_AddTriangleToMesh(meshID, v7, v4, v6);
+    
+	//8 - 11 (Left)
+    normal = {-1.f, 0.f, 0.f, 0.f};
+    int v8 = gfx_AddVertexToMesh(meshID, p7, normal, color);
+    int v9 = gfx_AddVertexToMesh(meshID, p4, normal, color);
+    int v10 = gfx_AddVertexToMesh(meshID, p0, normal, color);
+    int v11 = gfx_AddVertexToMesh(meshID, p3, normal, color);
+    
+    gfx_AddTriangleToMesh(meshID, v11, v9, v8);
+    gfx_AddTriangleToMesh(meshID, v10, v9, v11);
+    
+	//12 - 15 (Right)
+    normal = {1.f, 0.f, 0.f, 0.f};
+    int v12 = gfx_AddVertexToMesh(meshID, p6, normal, color);
+    int v13 = gfx_AddVertexToMesh(meshID, p5, normal, color);
+    int v14 = gfx_AddVertexToMesh(meshID, p1, normal, color);
+    int v15 = gfx_AddVertexToMesh(meshID, p2, normal, color);
+    
+    gfx_AddTriangleToMesh(meshID, v14, v12, v13);
+    gfx_AddTriangleToMesh(meshID, v15, v12, v14);
+    
+	//16 - 19 (Front)
+    normal = {0.f, 0.f, 1.f, 0.f};
+    int v16 = gfx_AddVertexToMesh(meshID, p4, normal, color);
+    int v17 = gfx_AddVertexToMesh(meshID, p5, normal, color);
+    int v18 = gfx_AddVertexToMesh(meshID, p1, normal, color);
+    int v19 = gfx_AddVertexToMesh(meshID, p0, normal, color);
+    
+    gfx_AddTriangleToMesh(meshID, v19, v17, v16);
+    gfx_AddTriangleToMesh(meshID, v18, v17, v19);
+    
+	//20 - 23 (Back)
+    normal = {0.f, 0.f, -1.f, 0.f};
+    int v20 = gfx_AddVertexToMesh(meshID, p7, normal, color);
+    int v21 = gfx_AddVertexToMesh(meshID, p6, normal, color);
+    int v22 = gfx_AddVertexToMesh(meshID, p2, normal, color);
+    int v23 = gfx_AddVertexToMesh(meshID, p4, normal, color);
+    
+    gfx_AddTriangleToMesh(meshID, v22, v20, v21);
+    gfx_AddTriangleToMesh(meshID, v23, v20, v22);
+    
+    gfx_FinishMesh(meshID);
+    return meshID;
 }
