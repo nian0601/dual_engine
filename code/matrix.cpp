@@ -286,36 +286,6 @@ void TranslateForward(Matrix& aMatrix, float aDistance)
     Translate(aMatrix, aMatrix.myRows[2].myData * aDistance);
 }
 
-void RotateX(Matrix& aMatrix, float aRadians)
-{
-    Vector4f translation = GetTranslation(aMatrix);
-    SetTranslation(aMatrix, {0.f, 0.f, 0.f});
-    
-    aMatrix = aMatrix * RotationMatrixX(aRadians);
-    
-    SetTranslation(aMatrix, {translation.x, translation.y, translation.z});
-}
-
-void RotateY(Matrix& aMatrix, float aRadians)
-{
-    Vector4f translation = GetTranslation(aMatrix);
-    SetTranslation(aMatrix, {0.f, 0.f, 0.f});
-    
-    aMatrix = aMatrix * RotationMatrixY(aRadians);
-    
-    SetTranslation(aMatrix, {translation.x, translation.y, translation.z});
-}
-
-void RotateZ(Matrix& aMatrix, float aRadians)
-{
-    Vector4f translation = GetTranslation(aMatrix);
-    SetTranslation(aMatrix, {0.f, 0.f, 0.f});
-    
-    aMatrix = aMatrix * RotationMatrixZ(aRadians);
-    
-    SetTranslation(aMatrix, {translation.x, translation.y, translation.z});
-}
-
 Matrix InverseSimple(const Matrix& aMatrix)
 {
     Matrix result = aMatrix;
@@ -461,4 +431,34 @@ Matrix InverseReal(const Matrix& aMatrix)
 		returnMatrix.myData[i] = inv[i] * det;
 
 	return returnMatrix;
+}
+
+void RotateX(Matrix& aMatrix, float aRadians)
+{
+    Vector4f translation = GetTranslation(aMatrix);
+    SetTranslation(aMatrix, {0.f, 0.f, 0.f});
+    
+    aMatrix = aMatrix * RotationMatrixX(aRadians);
+    
+    SetTranslation(aMatrix, {translation.x, translation.y, translation.z});
+}
+
+void RotateY(Matrix& aMatrix, float aRadians)
+{
+    Vector4f translation = GetTranslation(aMatrix);
+    SetTranslation(aMatrix, {0.f, 0.f, 0.f});
+    
+    aMatrix = aMatrix * RotationMatrixY(aRadians);
+    
+    SetTranslation(aMatrix, {translation.x, translation.y, translation.z});
+}
+
+void RotateZ(Matrix& aMatrix, float aRadians)
+{
+    Vector4f translation = GetTranslation(aMatrix);
+    SetTranslation(aMatrix, {0.f, 0.f, 0.f});
+    
+    aMatrix = aMatrix * RotationMatrixZ(aRadians);
+    
+    SetTranslation(aMatrix, {translation.x, translation.y, translation.z});
 }

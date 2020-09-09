@@ -1,5 +1,6 @@
-#include "DE_Vector.cpp"
-#include "DE_Matrix.cpp"
+#include "vector.cpp"
+#include "matrix.cpp"
+#include "quaternion.cpp"
 
 #define FLT_MAX 3.402823466e+38F
 

@@ -44,8 +44,19 @@ void UpdateCamera(float aDeltaTime, gfx_camera& aCamera)
         if(Length(ourInput.myMouseDelta) > 0.f)
         {
             float rotationSpeed = 3.14f * 0.1f * aDeltaTime;
-            RotateX(aCamera.myView, rotationSpeed * ourInput.myMouseDelta.y);
-            RotateY(aCamera.myView, rotationSpeed * ourInput.myMouseDelta.x);
+    
+            
+            Vector4f translation = GetTranslation(aCamera.myView);
+            SetTranslation(aCamera.myView, {0.f, 0.f, 0.f});
+            
+            Matrix xRotation = RotationMatrixAxisAngle(aCamera.myView.myRows[0].myData, rotationSpeed * ourInput.myMouseDelta.y);
+
+            Matrix yRotation = RotationMatrixAxisAngle(aCamera.myView.myRows[1].myData, rotationSpeed * ourInput.myMouseDelta.x);
+            
+            aCamera.myView = aCamera.myView * xRotation;
+            aCamera.myView = aCamera.myView * yRotation;
+            
+            SetTranslation(aCamera.myView, {translation.x, translation.y, translation.z});
         }
     }
     

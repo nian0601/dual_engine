@@ -9,11 +9,11 @@
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"
 
-#include "DE_Math.h"
-#include "DE_Collision.h"
-#include "DE_Collision.cpp"
-#include "DE_Timer.cpp"
-#include "DE_Input.cpp"
+#include "math.h"
+#include "collision.h"
+#include "collision.cpp"
+#include "timer.cpp"
+#include "input.cpp"
 #include "gfx_interface.h"
 #include "common_utils.cpp"
 #include "array.cpp"
