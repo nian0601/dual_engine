@@ -68,7 +68,7 @@ unsigned int OpenGL_CreateShader(const char* aVertexName, const char* aPixelName
     char fullPath[100];
     
     // Compile our VertexShader
-    snprintf(fullPath, 100, "data/shaders/opengl/%s", aVertexName);
+    snprintf(fullPath, 100, "data/shaders/%s", aVertexName);
     DE_File vertexFile = DE_ReadEntireFile(fullPath);
     unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertexShader, 1, &vertexFile.myContents, NULL);
@@ -77,7 +77,7 @@ unsigned int OpenGL_CreateShader(const char* aVertexName, const char* aPixelName
     DE_FreeFile(vertexFile);
     
     // Compile our FragmentShader
-    snprintf(fullPath, 100, "data/shaders/opengl/%s", aPixelName);
+    snprintf(fullPath, 100, "data/shaders/%s", aPixelName);
     DE_File pixelFile = DE_ReadEntireFile(fullPath);
     unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
     glShaderSource(fragmentShader, 1, &pixelFile.myContents, NULL);
