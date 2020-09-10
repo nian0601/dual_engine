@@ -79,27 +79,37 @@ void CreateCube(int aMeshID, float x, float y, float z, float r, float g, float 
     gfx_AddTriangleToMesh(aMeshID, v23, v20, v22);
 }
 
-void FillChunk(Chunk* aChunk, const Vector3f& aPosition)
+void FillChunk(Chunk* aChunk)
 {
-    aChunk->myMeshID = gfx_CreateMesh();
-    
-    aChunk->myPosition = aPosition;
-    
-    aChunk->myBlocks = new Block**[ChunkSize];
+    ArrayAlloc(aChunk->myBlocks, ChunkSize * ChunkSize * ChunkSize);
     
     for(int x = 0; x < ChunkSize; ++x)
     {
-        aChunk->myBlocks[x] = new Block*[ChunkSize];
         for(int y = 0; y < ChunkSize; ++y)
         {
-            aChunk->myBlocks[x][y] = new Block[ChunkSize];
             for(int z = 0; z < ChunkSize; ++z)
             {
-                Block* block = &aChunk->myBlocks[x][y][z];
-                block->myBlockType = static_cast<BlockType>(rand() % 3);
+                Block& block = ArrayAdd(aChunk->myBlocks);
+                block.myBlockType = static_cast<BlockType>(rand() % 3);
+            }
+        }
+    }
+}
+
+void BuildChunkMesh(Chunk* aChunk)
+{
+    aChunk->myMeshID = gfx_CreateMesh();
+    
+    for(int x = 0; x < ChunkSize; ++x)
+    {
+        for(int y = 0; y < ChunkSize; ++y)
+        {
+            for(int z = 0; z < ChunkSize; ++z)
+            {
+                int index = (x * (ChunkSize-1)) + (y * ChunkSize) + z;
                 
                 Vector4f color;
-                switch(block->myBlockType)
+                switch(aChunk->myBlocks[index].myBlockType)
                 {
                     case Type1: color = {0.54f, 0.57f, 0.54f, 1.f}; break;
                     case Type2: color = {0.54f, 0.54f, 0.51f, 1.f}; break;
@@ -111,27 +121,34 @@ void FillChunk(Chunk* aChunk, const Vector3f& aPosition)
         }
     }
     
+    
+    
     gfx_FinishMesh(aChunk->myMeshID);
 }
 
 void CreateWorld()
 {
-    ourGameState.myWorld.myChunks = new Chunk**[WorldSize];
+    ArrayAlloc(ourGameState.myWorld.myChunks, WorldSize * WorldSize * WorldSize);
+    ArrayAlloc(ourGameState.myWorld.myChunksToBuild, WorldSize);
+    ArrayAlloc(ourGameState.myWorld.myChunksToRender, WorldSize);
     
     for(int x = 0; x < WorldSize; x++)
     {
-        ourGameState.myWorld.myChunks[x] = new Chunk*[WorldSize];
         for(int y = 0; y < WorldSize; ++y)
         {
-            ourGameState.myWorld.myChunks[x][y] = new Chunk[ChunkSize];
             for(int z = 0; z < WorldSize; ++z)
             {
                 Vector3f chunkPosition;
-                chunkPosition.x = float(x) * ChunkSize;
-                chunkPosition.y = float(y) * ChunkSize;
-                chunkPosition.z = float(z) * ChunkSize;
+                chunkPosition.x = float(x);
+                chunkPosition.y = float(y);
+                chunkPosition.z = float(z);
                 
-                FillChunk(&ourGameState.myWorld.myChunks[x][y][z], chunkPosition);
+                Chunk* chunk = new Chunk();
+                chunk->myChunkPosition = chunkPosition;   
+                chunk->myWorldPosition = chunkPosition * ChunkSize;
+                
+                ArrayAdd(ourGameState.myWorld.myChunks, chunk);
+                ArrayAdd(ourGameState.myWorld.myChunksToBuild, chunk);
             }
         }
     }
@@ -139,19 +156,34 @@ void CreateWorld()
 
 void RenderChunk(Chunk* aChunk)
 {
-    QueueMesh(aChunk->myMeshID, aChunk->myPosition);
+    QueueMesh(aChunk->myMeshID, aChunk->myWorldPosition);
 }
 
 void RenderWorld()
 {
-    for(int x = 0; x < WorldSize; x++)
+    GrowingArray<Chunk*>& chunks = ourGameState.myWorld.myChunksToRender;
+    for(int i = 0; i < chunks.myCount; ++i)
+        RenderChunk(chunks[i]);
+}
+
+void BuildChunks()
+{
+    GrowingArray<Chunk*>& chunks = ourGameState.myWorld.myChunksToBuild;
+    int chunksRemoved = 0;
+    for(int i = 0; i < chunks.myCount && chunksRemoved < MaxChunksToCreatePerUpdate;)
     {
-        for(int y = 0; y < WorldSize; ++y)
-        {
-            for(int z = 0; z < WorldSize; ++z)
-            {
-                RenderChunk(&ourGameState.myWorld.myChunks[x][y][z]);
-            }
-        }
+        Chunk* chunk = chunks[i];
+        ArrayRemoveCyclic(chunks, i);
+        FillChunk(chunk);
+        BuildChunkMesh(chunk);
+        
+        ArrayAdd(ourGameState.myWorld.myChunksToRender, chunk);
+        
+        ++chunksRemoved;
     }
+}
+
+void UpdateWorld()
+{
+    BuildChunks();
 }

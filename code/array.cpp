@@ -4,9 +4,9 @@ struct GrowingArray
     T& operator[](const int& aIndex);
 	const T& operator[](const int& aIndex) const;
     
-    int myCount;
-    int myMaxCount;
-    T* myData;
+    int myCount = 0;
+    int myMaxCount = 0;
+    T* myData = nullptr;
 };
 
 template<typename T>

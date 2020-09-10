@@ -144,8 +144,9 @@ int main(int argc, char** argv)
     myCamera.myView = IdentityMatrix();
     myCamera.myInvertedView = IdentityMatrix();
 
-    SetTranslation(myCamera.myView, {10.f, 15.f, -35.f});
-    //myCamera.myView = myCamera.myView * RotationMatrixX(pi * 0.25f);
+    myCamera.myView = myCamera.myView * RotationMatrixX(pi * 0.25f);
+    myCamera.myView = myCamera.myView * RotationMatrixY(pi * 0.25f);
+    SetTranslation(myCamera.myView, {-30.f, 120.f, -55.f});
     
     gfx_SetCamera(&myCamera);
     
@@ -186,6 +187,7 @@ int main(int argc, char** argv)
         gfx_Clear();
         
         gfx_Begin3D();
+        UpdateWorld();
         RenderWorld();
         
         

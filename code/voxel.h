@@ -14,13 +14,18 @@ struct Block
 static const int ChunkSize = 16;
 struct Chunk
 {
-    Block*** myBlocks;
-    Vector3f myPosition;
+    GrowingArray<Block> myBlocks;
+    Vector3f myWorldPosition;
+    Vector3f myChunkPosition;
     int myMeshID;
 };
 
-static const int WorldSize = 4;
+static const int WorldSize = 6;
+static const int MaxChunksToCreatePerUpdate = 1;
 struct World
 {
-    Chunk*** myChunks;
+    GrowingArray<Chunk*> myChunks;
+    
+    GrowingArray<Chunk*> myChunksToBuild;
+    GrowingArray<Chunk*> myChunksToRender;
 };
