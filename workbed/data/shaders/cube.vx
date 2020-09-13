@@ -25,4 +25,6 @@ void main()
 	ColorAndMetalness = aColor;
 	ColorAndMetalness.xyz *= ColorAndMetalnessIn.xyz;
 	ColorAndMetalness.w = ColorAndMetalnessIn.w;
+
+	Position = World * aPos;
 };

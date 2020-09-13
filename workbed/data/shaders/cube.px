@@ -8,6 +8,11 @@ in vec4 ColorAndMetalness;
 
 void main()
 {
-   FragColor = vec4(abs(ColorAndMetalness.xyz), 1.0);
-   //FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+	FragColor = vec4(abs(ColorAndMetalness.xyz), 1.0);
+
+	vec4 LightPosition = vec4(100.0, 100.0, 100.0, 0.0);
+	vec4 lightDir = normalize(LightPosition - Position);
+
+	float diff = max(dot(NormalAndRoughness.xyz, lightDir.xyz), 0.0);
+	FragColor.xyz *= diff;
 };
