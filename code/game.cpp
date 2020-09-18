@@ -14,9 +14,9 @@ void SetupGame()
 
 void UpdateCamera(float aDeltaTime, gfx_camera& aCamera)
 {
-    float movement = 5.f;
+    float movement = 10.f;
     if(KeyDown(DEK_LSHIFT))
-        movement = 15.f;
+        movement = 50.f;
     
     movement *= aDeltaTime;
     

@@ -1,37 +1,58 @@
+int GetBlockIndex(int x, int y, int z)
+{
+    return (x * ChunkSize * ChunkSize) + (y * ChunkSize) + z;
+}
+
+int GetBlockType(Chunk* aChunk, int x, int y, int z)
+{
+    ASSERT(x >= 0 && x < ChunkSize);
+    ASSERT(y >= 0 && y < ChunkSize);
+    ASSERT(z >= 0 && z < ChunkSize);
+    
+    return aChunk->myBlocks[GetBlockIndex(x, y, z)];
+}
+
 void FillChunk(Chunk* aChunk)
 {
     ArrayAlloc(aChunk->myBlocks, ChunkSize * ChunkSize * ChunkSize);
     
+    int grassThickness = 1;
+    int dirtThickness = 3;
     for(int x = 0; x < ChunkSize; ++x)
     {
+        int voxelX = aChunk->myChunkX * ChunkSize + x;
+        
         for(int y = 0; y < ChunkSize; ++y)
         {
+            int voxelY = aChunk->myChunkY * ChunkSize + y;
+            
             for(int z = 0; z < ChunkSize; ++z)
             {
-                int voxelX = aChunk->myChunkX * ChunkSize + x;
                 int voxelZ = aChunk->myChunkZ * ChunkSize + z;
                 
-                float value = ourGameState.myWorld.myNoise.GetValue(voxelX, voxelZ);
+                float value = ourGameState.myWorld.myNoise.GetSimplex(voxelX, voxelZ);
                 value += 1.f;
                 value *= 0.5f;
                 
-                value *= 15.f;
+                int groundLevel = static_cast<int>(value * 30.f);
                 
-                int voxelY = aChunk->myChunkY * ChunkSize + y;
                 
-                int blockValue = 2;
-                if(voxelY > value)
-                    blockValue = 6;
-                else
+                int blockValue = InvalidBlockType;
+                if(voxelY <= groundLevel)
                 {
-                    if(voxelY < 5)
-                        blockValue = 1;
-                    else if(voxelY < 10)
-                        blockValue = 2;
-                    else if(voxelY < 15)
-                        blockValue = 3;
+                    if(voxelY == groundLevel)
+                    {
+                        blockValue = Grass;
+                    }
+                    else if(voxelY > groundLevel - dirtThickness)
+                    {
+                        blockValue = Dirt;
+                    }
+                    else
+                    {
+                        blockValue = Stone;
+                    }
                 }
-                
                 ArrayAdd(aChunk->myBlocks, blockValue);
             }
         }
@@ -40,37 +61,56 @@ void FillChunk(Chunk* aChunk)
 
 void BuildChunkMesh(Chunk* aChunk)
 {
-    aChunk->myMeshID = gfx_CreateMesh();
+    aChunk->myMeshID = gfx_CreateMesh();   
     
     for(int x = 0; x < ChunkSize; ++x)
-    {
+    {       
         for(int y = 0; y < ChunkSize; ++y)
         {
             for(int z = 0; z < ChunkSize; ++z)
             {
-                int index = (x * ChunkSize * ChunkSize) + (y * ChunkSize) + z;
-                
+                int index = GetBlockIndex(x, y, z);
                 int blockType = aChunk->myBlocks[index];
-                if(blockType == 6)
+     
+                if(blockType == InvalidBlockType)
                     continue;
                 
-                Vector4f color;
+                bool isXEdge = x == 0 || x == ChunkSize - 1;
+                bool isYEdge = y == 0 || y == ChunkSize - 1;
+                bool isZEdge = z == 0 || z == ChunkSize - 1;
+                
+                if(!isXEdge && !isYEdge && !isZEdge)
+                {   
+                    bool fullySurrounded = true;
+                    if(GetBlockType(aChunk, x - 1, y, z) != InvalidBlockType)
+                        fullySurrounded = false;
+                    
+                    if(GetBlockType(aChunk, x + 1, y, z) != InvalidBlockType)
+                        fullySurrounded = false;
+                    
+                    if(GetBlockType(aChunk, x, y - 1, z) != InvalidBlockType)
+                        fullySurrounded = false;
+                    
+                    if(GetBlockType(aChunk, x, y + 1, z) != InvalidBlockType)
+                        fullySurrounded = false;
+                    
+                    if(GetBlockType(aChunk, x, y, z - 1) != InvalidBlockType)
+                        fullySurrounded = false;
+                    
+                    if(GetBlockType(aChunk, x, y, z + 1) != InvalidBlockType)
+                        fullySurrounded = false;
+                    
+                    if(fullySurrounded)
+                        continue;
+                }
+                
+                Vector4f color = {0.f, 0.f, 0.f, 1.f};
+                
                 switch(blockType)
                 {
-                    //case Type0:
-                    //case Type1: color = {0.54f, 0.57f, 0.54f, 1.f}; break;
-                    //case Type2: color = {0.54f, 0.54f, 0.51f, 1.f}; break;
-                    //case Type3: color = {0.55f, 0.51f, 0.52f, 1.f}; break;
-                    
-                    //case Type0:
-                    //case Type1: color = {1.0f, 0.0f, 0.0f, 1.f}; break;
-                    //case Type2: color = {0.0f, 1.0f, 0.0f, 1.f}; break;
-                    //case Type3: color = {0.0f, 0.0f, 1.0f, 1.f}; break;
-                    
-                    case Type0: color = {0.0f, 0.5f, 0.0f, 1.f}; break;
-                    case Type1: color = {0.0f, 0.8f, 0.0f, 1.f}; break;
-                    case Type2: color = {0.0f, 0.75f, 0.0f, 1.f}; break;
-                    case Type3: color = {0.0f, 0.7f, 0.0f, 1.f}; break;
+                    case Grass: color = {0.05f, 0.75f, 0.1f, 1.f}; break;
+                    case Dirt: color = {77.f/256.f, 39.f/256.f, 14.f/256.f, 1.f}; break;
+                    case Stone: color = {87.f/256.f, 83.f/256.f, 80.f/256.f, 1.f};
                 }
                 
                 gfx_CreateCubeMesh(aChunk->myMeshID, float(x), float(y), float(z), color.x, color.y, color.z);
@@ -83,13 +123,14 @@ void BuildChunkMesh(Chunk* aChunk)
 
 void CreateWorld()
 {
-    ArrayAlloc(ourGameState.myWorld.myChunks, WorldSize * WorldSize * WorldSize);
+    ArrayAlloc(ourGameState.myWorld.myChunks, WorldSize * WorldHeight  * WorldSize);
     ArrayAlloc(ourGameState.myWorld.myChunksToBuild, WorldSize);
     ArrayAlloc(ourGameState.myWorld.myChunksToRender, WorldSize);
 
+    #if 1
     for(int x = 0; x < WorldSize; ++x)
     {
-        for(int y = 0; y < WorldSize; ++y)
+        for(int y = 0; y < WorldHeight; ++y)
         {
             for(int z = 0; z < WorldSize; z++)
             {
@@ -106,6 +147,35 @@ void CreateWorld()
             }
         }
     }
+    #else
+    int startX = 1;
+    int startY = 0;
+    int startZ = 1;
+    int endX = 3;
+    int endY = 1;
+    int endZ = 3;
+    
+    for(int x = startX; x < endX; ++x)
+    {
+        for(int y = startY; y < endY; ++y)
+        {
+            for(int z = startZ; z < endZ; z++)
+            {
+                Chunk* chunk = new Chunk();
+                chunk->myChunkX = x;
+                chunk->myChunkY = y;
+                chunk->myChunkZ = z;
+                chunk->myWorldPosition.x = x * ChunkSize + (x * 5.f);
+                chunk->myWorldPosition.y = y * ChunkSize;
+                chunk->myWorldPosition.z = z * ChunkSize + (z * 5.f);
+                
+                ArrayAdd(ourGameState.myWorld.myChunks, chunk);
+                ArrayAdd(ourGameState.myWorld.myChunksToBuild, chunk);
+            }
+        }
+    }
+    #endif
+
 }
 
 void RenderChunk(Chunk* aChunk)
@@ -124,10 +194,10 @@ void BuildChunks()
 {
     GrowingArray<Chunk*>& chunks = ourGameState.myWorld.myChunksToBuild;
     int chunksRemoved = 0;
-    for(int i = 0; i < chunks.myCount && chunksRemoved < MaxChunksToCreatePerUpdate;)
+    while(chunks.myCount > 0 && chunksRemoved < MaxChunksToCreatePerUpdate)
     {
-        Chunk* chunk = chunks[i];
-        ArrayRemoveCyclic(chunks, i);
+        Chunk* chunk = chunks[chunks.myCount - 1];
+        ArrayRemoveCyclic(chunks, chunks.myCount - 1);
         FillChunk(chunk);
         BuildChunkMesh(chunk);
         

@@ -9,6 +9,13 @@
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"
 
+#include "glad/include/gl.h"
+#include "glad/gl.c"
+#include "glfw/glfw3.h"
+
+#define GLFW_EXPOSE_NATIVE_WIN32
+#include "glfw/glfw3native.h"
+
 #include "math.h"
 #include "collision.h"
 #include "collision.cpp"
@@ -32,114 +39,64 @@
 
 #include "opengl.cpp"
 
-LRESULT CALLBACK WndProc(HWND aHwnd, UINT aMessage, WPARAM aWParam, LPARAM aLParam)
+void processInput(GLFWwindow* window)
 {
-    switch (aMessage)
-    {
-		case WM_PAINT:
-        { 
-            PAINTSTRUCT ps;
-            BeginPaint(aHwnd, &ps);
-            EndPaint(aHwnd, &ps);
-            return 0;
-        }
-        case WM_DESTROY:
-        {
-            PostQuitMessage(0);
-            return 0;
-        }
-        case WM_INPUT:
-        {
-            OnInputMessage(aWParam, aLParam);
-            return 0;
-        }
-        case WM_SIZE:
-        case WM_ACTIVATE:
-		case WM_ENTERSIZEMOVE:
-        case WM_EXITSIZEMOVE:
-        {
-            return 0;
-        }
-    }
-    
-    return DefWindowProcA(aHwnd, aMessage, aWParam, aLParam);
+    if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+        glfwSetWindowShouldClose(window, true);
 }
 
-HWND Win32CreateWindow(const char* aTitle, int aWindowWidth, int aWindowHeight)
+void glfw_key_callback(GLFWwindow* aWindow, int aKey, int aScancode, int aAction, int someMods)
 {
-    WNDCLASSEX wcex;
-	wcex.cbSize = sizeof(WNDCLASSEX);
-    
-	wcex.style = CS_HREDRAW | CS_VREDRAW;
-	wcex.lpfnWndProc = WndProc;
-	wcex.cbClsExtra = 0;
-	wcex.cbWndExtra = 0;
-	wcex.hInstance = GetModuleHandle(NULL);
-	wcex.hIcon = LoadIcon(wcex.hInstance, NULL);
-	wcex.hCursor = LoadCursor(NULL, IDC_ARROW);
-	wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
-	wcex.lpszMenuName = NULL;
-	wcex.lpszClassName = aTitle;
-	wcex.hIconSm = LoadIcon(wcex.hInstance, NULL);
-    
-    ASSERT(RegisterClassEx(&wcex) != FALSE);
-    
-    RECT rc = {0, 0, aWindowWidth, aWindowHeight};
-    AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, FALSE);
-    
-    
-    HWND windowHandle = CreateWindowEx(
-        WS_EX_CLIENTEDGE,
-        aTitle,
-        aTitle,
-        WS_OVERLAPPEDWINDOW,
-        0,
-        0,
-        rc.right - rc.left,
-        rc.bottom - rc.top,
-        NULL,
-        NULL,
-        GetModuleHandle(NULL),
-        NULL);
-    
-    RECT windowSize;
-    GetWindowRect(windowHandle, &windowSize);
-    ASSERT(windowHandle != NULL);
-    
-    RegisterInputDevices(windowHandle);
-    
-    ShowWindow(windowHandle, 10);
-    UpdateWindow(windowHandle);
-    
-    return windowHandle;
+    OnGLFWKeyboardCallback(aKey, aAction);
 }
 
-int main(int argc, char** argv)
+void glfw_mousebutton_callback(GLFWwindow* aWindow, int aButton, int aAction, int someMods)
+{
+    OnGLFWMouseButtonCallback(aButton, aAction);
+}
+
+int main()
 {
     const char* windowTitle = "Voxel Engine";
     
     const int windowWidth = 1280;
     const int windowHeight = 720;
-    Vector2f windowSize = {windowWidth, windowHeight};
-    HWND windowHandle = Win32CreateWindow(windowTitle, windowWidth, windowHeight);
-    gfx_Init(windowHandle, windowWidth, windowHeight);
     
-    RECT clientArea;
-    ASSERT(GetClientRect(windowHandle, &clientArea) != 0);
-        
+    glfwInit();
+    
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    
+    GLFWwindow* window = glfwCreateWindow(windowWidth, windowHeight, windowTitle, NULL, NULL);
+    if(!window)
+    {
+        glfwTerminate();
+        return -1;
+    }
+    
+    glfwSetKeyCallback(window, glfw_key_callback);
+    glfwSetMouseButtonCallback(window, glfw_mousebutton_callback);
+    glfwMakeContextCurrent(window);
+    
+    if(!gladLoaderLoadGL())
+    {
+        glfwTerminate();
+        return -1;
+    }
+   
+    HWND windowHandle = glfwGetWin32Window(window);
+    gfx_Init(windowHandle, windowWidth, windowHeight);
     gfx_Viewport(0, 0, windowWidth, windowHeight);
     gfx_ClearColor(0.5f, 0.2f, 0.1f);
-    
-    MSG msg = {};
-    bool isRunning = true;
     
     const float pi = 3.14159265f;
     
     gfx_camera myCamera;
     myCamera.myWindowSize.x = windowWidth;
     myCamera.myWindowSize.y = windowHeight;
-    myCamera.myScreenSize.x = clientArea.right - clientArea.left;
-    myCamera.myScreenSize.y = clientArea.bottom - clientArea.top;
+    myCamera.myScreenSize.x = windowWidth;
+    myCamera.myScreenSize.y = windowHeight;
     
     myCamera.myProjection = ProjectionMatrix(0.1f, 1000.f, float(windowHeight) / windowWidth, pi * 0.5f);
     myCamera.myView = IdentityMatrix();
@@ -160,32 +117,16 @@ int main(int argc, char** argv)
     SetupGame();
     CreateWorld();
     
-    AssetInfo texture0 = GetBitmap("container.jpg");
-    //AssetInfo texture0 = GetBitmap("awesomeface.png");
-    
-    
-    while(isRunning)
+    while(!glfwWindowShouldClose(window))
     {
-        UpdateInputState();
+        processInput(window);
+        glfwPollEvents();
+ 
+        UpdateInputState(window);
         UpdateTimer(frameTimer);
         float deltaTime = GetDeltaTime(frameTimer);
         
-        if(PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
-        {
-            UINT msgCode = msg.message;
-            if(msgCode == WM_QUIT || msgCode == WM_DESTROY)
-                isRunning = false;
-            
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-        }
-        
-        if(KeyDownThisFrame(DEK_ESCAPE))
-            isRunning = false;
-        
         UpdateCamera(deltaTime, myCamera);        
-        //UpdateAndRenderGame(deltaTime);
-        
         
         gfx_Clear();
         
@@ -193,23 +134,15 @@ int main(int argc, char** argv)
         UpdateWorld();
         RenderWorld();
         
-        
-        
-        /*
-        QueueQuad(texture0.myTextureID, {200.f, 200.f}, texture0.mySize);
-       
-        QueueText({100.f, 300.f}, "TestSomeMore");
-        QueueText({100.f, 500.f}, "WithSomeMore");
-        QueueText({100.f, 700.f}, "ABCDEFGHIJKLMNOP");
-        QueueText({100.f, 900.f}, "abcdefghijklmnop");
-        */
-        
         PushRendererData();
         gfx_FinishFrame();    
+        
+        glfwSwapBuffers(window);
     }
     
     FreeAssets();
     gfx_Shutdown();
-    
+
+    glfwTerminate();
     return 0;
 }

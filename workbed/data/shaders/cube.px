@@ -8,11 +8,18 @@ in vec4 ColorAndMetalness;
 
 void main()
 {
-	FragColor = vec4(abs(ColorAndMetalness.xyz), 1.0);
+	vec3 objectColor = ColorAndMetalness.xyz;
 
 	vec4 LightPosition = vec4(100.0, 100.0, 100.0, 0.0);
 	vec4 lightDir = normalize(LightPosition - Position);
+	vec3 lightColor = vec3(0.75, 0.75, 0.75);
 
 	float diff = max(dot(NormalAndRoughness.xyz, lightDir.xyz), 0.0);
-	FragColor.xyz *= diff;
+	vec3 diffuse = diff * lightColor;
+
+	float ambientStenght = 0.1;
+	vec3 ambient = ambientStenght * lightColor;
+
+	vec3 finalColor = (diffuse + ambient) * objectColor;
+	FragColor = vec4(finalColor, 1.0);
 };

@@ -2,10 +2,10 @@
 
 enum BlockType
 {
-    Type0,
-    Type1,
-    Type2,
-    Type3,
+    InvalidBlockType,
+    Stone,
+    Dirt,
+    Grass,
     BlockTypeCount,
 };
 
@@ -16,7 +16,7 @@ struct BlockInfo
 static BlockInfo ourBlockInfos[BlockTypeCount];
 
 
-static const int ChunkSize = 16;
+static const int ChunkSize = 32;
 struct Chunk
 {
     GrowingArray<int> myBlocks;
@@ -28,7 +28,8 @@ struct Chunk
 };
 
 static const int WorldSize = 8;
-static const int MaxChunksToCreatePerUpdate = 1;
+static const int WorldHeight = 2;
+static const int MaxChunksToCreatePerUpdate = 4;
 struct World
 {
     GrowingArray<Chunk*> myChunks;

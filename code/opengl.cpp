@@ -1,5 +1,5 @@
-#define GL_LITE_IMPLEMENTATION
-#include "gl_lite.h"
+//#define GL_LITE_IMPLEMENTATION
+//#include "gl_lite.h"
 
 struct OpenGL_cubeVertex
 {
@@ -174,12 +174,12 @@ void gfx_Init(HWND aWindowHandle, int aWindowHeight, int aWindowWidth)
     DescribePixelFormat(windowDC, suggestedPixelFormatIndex, sizeof(suggestedPixelFormat), &suggestedPixelFormat);
     SetPixelFormat(windowDC, suggestedPixelFormatIndex, &suggestedPixelFormat);
     
-    HGLRC openGLRC = wglCreateContext(windowDC);
-    bool result = wglMakeCurrent(windowDC, openGLRC);
-    ASSERT(result == true);
+    //HGLRC openGLRC = wglCreateContext(windowDC);
+    //bool result = wglMakeCurrent(windowDC, openGLRC);
+    //ASSERT(result == true);
     
-    result = gl_lite_init();
-    ASSERT(result == true);
+    //result = gl_lite_init();
+    //ASSERT(result == true);
     
     ArrayAlloc(ourOpenGL_Context.myMeshes, 16);
     
@@ -281,16 +281,14 @@ void gfx_DrawCube(const Matrix& aTransform, const Vector4f& aColor)
 
 void gfx_DrawMesh(int aMeshID, const Matrix& aTransform)
 {
+    OpenGL_renderobject& mesh = ourOpenGL_Context.myMeshes[aMeshID];
+    
     int worldLocation = glGetUniformLocation(ourOpenGL_Context.myActiveShader, "World");
     glUniformMatrix4fv(worldLocation, 1, GL_FALSE, aTransform.myData);
     
     int colorAndMetalness = glGetUniformLocation(ourOpenGL_Context.myActiveShader, "ColorAndMetalnessIn");
     glUniform4f(colorAndMetalness, 1.f, 1.f, 1.f, 1.f);
     
-    OpenGL_renderobject& mesh = ourOpenGL_Context.myMeshes[aMeshID];
-    
-    glBindBuffer(GL_ARRAY_BUFFER, mesh.myVertexBufferObject);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.myElementBufferObject);
     glBindVertexArray(mesh.myVertexArrayObject);
     
     glDrawElements(GL_TRIANGLES, mesh.myIndices.myCount, GL_UNSIGNED_INT, 0);
@@ -394,30 +392,37 @@ void gfx_FinishMesh(int aMeshID)
 {
     OpenGL_renderobject& mesh = ourOpenGL_Context.myMeshes[aMeshID];
  
-    // Setup VertexAttributes (input-layout)
+    // Create VertexBuffer + IndexBuffer
+    glGenBuffers(1, &mesh.myVertexBufferObject);
+    glGenBuffers(1, &mesh.myElementBufferObject);
+    
+    // Create and Bind VertexArrayObject
+    // This is the OpenGL-thingy that collects VertexBuffer, IndexBuffer and VertexAttributes under one ID
+    // Then we only need to bind this object when rendering
     glGenVertexArrays(1, &mesh.myVertexArrayObject);
     glBindVertexArray(mesh.myVertexArrayObject);
     
-    // Create a VertexBuffer
-    glGenBuffers(1, &mesh.myVertexBufferObject);
+
+    //Bind VertexBuffer + fill it with data
     glBindBuffer(GL_ARRAY_BUFFER, mesh.myVertexBufferObject);
     glBufferData(GL_ARRAY_BUFFER, sizeof(mesh.myVertices[0]) * mesh.myVertices.myCount, mesh.myVertices.myData, GL_STATIC_DRAW);
     
-    // Create a IndexBuffer
-    glGenBuffers(1, &mesh.myElementBufferObject);
-    
+
+    //Bind IndexBuffer + fill it with data
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.myElementBufferObject);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(mesh.myIndices[0]) * mesh.myIndices.myCount, mesh.myIndices.myData, GL_STATIC_DRAW);
  
     
- 
-    
+    // Setup the VertexAttributes (InputLayout)
+    // aPos (vec4)
     glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 12 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
     
+    // aNormal (vec4)
     glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 12 * sizeof(float), (void*)(4 * sizeof(float)));
     glEnableVertexAttribArray(1);
     
+    // aColor (vec4)
     glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, 12 * sizeof(float), (void*)(8 * sizeof(float)));
     glEnableVertexAttribArray(2);
 }
