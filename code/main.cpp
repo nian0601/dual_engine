@@ -117,6 +117,7 @@ int main()
     SetupGame();
     CreateWorld();
     
+    bool hasDestroyedShit = false;
     while(!glfwWindowShouldClose(window))
     {
         processInput(window);
@@ -127,6 +128,13 @@ int main()
         float deltaTime = GetDeltaTime(frameTimer);
         
         UpdateCamera(deltaTime, myCamera);        
+        
+        if(KeyDown(DEK_Q) && !hasDestroyedShit)
+        {
+            RemoveBlocksInSphere({32.f, 20.f, 32.f}, 15.f);
+            hasDestroyedShit = true;
+        }
+         
         
         gfx_Clear();
         

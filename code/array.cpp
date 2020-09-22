@@ -77,3 +77,16 @@ void ArrayRemoveCyclic(GrowingArray<T>& anArray, int anIndex)
     anArray.myCount--;
     anArray.myData[anIndex] = anArray.myData[anArray.myCount];
 }
+
+template <typename T>
+void ArrayRemoveCyclic(GrowingArray<T>& anArray, const T& anObject)
+{
+    for(int i = 0; i < anArray.myCount; ++i)
+    {
+        if(anArray.myData[i] == anObject)
+        {
+            ArrayRemoveCyclic(anArray, i);
+            return;
+        }
+    }
+}

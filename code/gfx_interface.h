@@ -36,6 +36,7 @@ void gfx_BeginText();
 
 
 int gfx_CreateMesh();
+void gfx_ClearMesh(int aMeshID);
 
 int gfx_AddVertexToMesh(int aMeshID, const Vector4f& aPosition, const Vector4f& aNormal, const Vector4f& aColor);
 void gfx_AddTriangleToMesh(int aMeshID, int aFirstVertexIndex, int aSecondVertexIndex, int aThirdVertexIndex);

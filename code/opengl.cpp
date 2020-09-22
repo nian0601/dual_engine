@@ -1,6 +1,3 @@
-//#define GL_LITE_IMPLEMENTATION
-//#include "gl_lite.h"
-
 struct OpenGL_cubeVertex
 {
     Vector4f myPosition;
@@ -268,7 +265,6 @@ void gfx_DrawQuad(unsigned int aTextureID, float aX, float aY, float aWidth, flo
 void gfx_DrawCube(const Matrix& aTransform, const Vector4f& aColor)
 {   
     glBindVertexArray(ourOpenGL_Context.myCube.myVertexArrayObject);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ourOpenGL_Context.myCube.myElementBufferObject);
     
     int worldLocation = glGetUniformLocation(ourOpenGL_Context.myActiveShader, "World");
     glUniformMatrix4fv(worldLocation, 1, GL_FALSE, aTransform.myData);
@@ -292,6 +288,8 @@ void gfx_DrawMesh(int aMeshID, const Matrix& aTransform)
     glBindVertexArray(mesh.myVertexArrayObject);
     
     glDrawElements(GL_TRIANGLES, mesh.myIndices.myCount, GL_UNSIGNED_INT, 0);
+    
+    glBindVertexArray(0);
 }
 
 void gfx_Begin2D()
@@ -365,7 +363,45 @@ int gfx_CreateMesh()
     ArrayAlloc(mesh.myVertices, 24);
     ArrayAlloc(mesh.myIndices, 32);
     
+    // Create and Bind VertexArrayObject
+    // This is the OpenGL-thingy that collects VertexBuffer, IndexBuffer and VertexAttributes under one ID
+    // Then we only need to bind this object when rendering
+    glGenVertexArrays(1, &mesh.myVertexArrayObject);
+    glBindVertexArray(mesh.myVertexArrayObject);
+    
+    
+    // Create VertexBuffer + IndexBuffer
+    glGenBuffers(1, &mesh.myVertexBufferObject);
+    glGenBuffers(1, &mesh.myElementBufferObject);
+    
+    // Bind Vertex and Index Buffers to associate it with the VertexArrayObject
+    glBindBuffer(GL_ARRAY_BUFFER, mesh.myVertexBufferObject);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.myElementBufferObject);
+ 
+    
+    // Setup the VertexAttributes (InputLayout)
+    // aPos (vec4)
+    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 12 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    
+    // aNormal (vec4)
+    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 12 * sizeof(float), (void*)(4 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    
+    // aColor (vec4)
+    glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, 12 * sizeof(float), (void*)(8 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+    
+    glBindVertexArray(0);
+    
     return ourOpenGL_Context.myMeshes.myCount - 1;
+}
+
+void gfx_ClearMesh(int aMeshID)
+{
+    OpenGL_renderobject& mesh = ourOpenGL_Context.myMeshes[aMeshID];
+    ArrayClear(mesh.myVertices);
+    ArrayClear(mesh.myIndices);
 }
 
 int gfx_AddVertexToMesh(int aMeshID, const Vector4f& aPosition, const Vector4f& aNormal, const Vector4f& aColor)
@@ -391,40 +427,14 @@ void gfx_AddTriangleToMesh(int aMeshID, int aFirstVertexIndex, int aSecondVertex
 void gfx_FinishMesh(int aMeshID)
 {
     OpenGL_renderobject& mesh = ourOpenGL_Context.myMeshes[aMeshID];
- 
-    // Create VertexBuffer + IndexBuffer
-    glGenBuffers(1, &mesh.myVertexBufferObject);
-    glGenBuffers(1, &mesh.myElementBufferObject);
     
-    // Create and Bind VertexArrayObject
-    // This is the OpenGL-thingy that collects VertexBuffer, IndexBuffer and VertexAttributes under one ID
-    // Then we only need to bind this object when rendering
-    glGenVertexArrays(1, &mesh.myVertexArrayObject);
-    glBindVertexArray(mesh.myVertexArrayObject);
-    
-
     //Bind VertexBuffer + fill it with data
     glBindBuffer(GL_ARRAY_BUFFER, mesh.myVertexBufferObject);
     glBufferData(GL_ARRAY_BUFFER, sizeof(mesh.myVertices[0]) * mesh.myVertices.myCount, mesh.myVertices.myData, GL_STATIC_DRAW);
-    
 
     //Bind IndexBuffer + fill it with data
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.myElementBufferObject);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(mesh.myIndices[0]) * mesh.myIndices.myCount, mesh.myIndices.myData, GL_STATIC_DRAW);
- 
-    
-    // Setup the VertexAttributes (InputLayout)
-    // aPos (vec4)
-    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 12 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    
-    // aNormal (vec4)
-    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 12 * sizeof(float), (void*)(4 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    
-    // aColor (vec4)
-    glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, 12 * sizeof(float), (void*)(8 * sizeof(float)));
-    glEnableVertexAttribArray(2);
 }
 
 void gfx_CreateCubeMesh(int aMeshID, float x, float y, float z, float r, float g, float b)
