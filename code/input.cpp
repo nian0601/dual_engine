@@ -12,13 +12,32 @@
 #define DEK_8 56
 #define DEK_9 57
 
-
-#define DEK_Q 81
-#define DEK_W 87
-#define DEK_E 69
 #define DEK_A 65
-#define DEK_S 83
+#define DEK_B 66
+#define DEK_C 67
 #define DEK_D 68
+#define DEK_E 69
+#define DEK_F 70
+#define DEK_G 71
+#define DEK_H 72
+#define DEK_I 73
+#define DEK_J 74
+#define DEK_K 75
+#define DEK_L 76
+#define DEK_M 77
+#define DEK_N 78
+#define DEK_O 79
+#define DEK_P 80
+#define DEK_Q 81
+#define DEK_R 82
+#define DEK_S 83
+#define DEK_T 84
+#define DEK_U 85
+#define DEK_V 86
+#define DEK_W 87
+#define DEK_X 88
+#define DEK_Y 89
+#define DEK_Z 90
 
 #define DEK_ESCAPE 256
 #define DEK_LSHIFT 340
