@@ -50,8 +50,7 @@ void UpdateCamera(float aDeltaTime, gfx_camera& aCamera)
             SetTranslation(aCamera.myView, {0.f, 0.f, 0.f});
             
             Matrix xRotation = RotationMatrixAxisAngle(aCamera.myView.myRows[0].myData, rotationSpeed * ourInput.myMouseDelta.y);
-
-            Matrix yRotation = RotationMatrixAxisAngle(aCamera.myView.myRows[1].myData, rotationSpeed * ourInput.myMouseDelta.x);
+            Matrix yRotation = RotationMatrixY(rotationSpeed * ourInput.myMouseDelta.x);
             
             aCamera.myView = aCamera.myView * xRotation;
             aCamera.myView = aCamera.myView * yRotation;
