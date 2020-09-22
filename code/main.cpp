@@ -39,12 +39,6 @@
 
 #include "opengl.cpp"
 
-void processInput(GLFWwindow* window)
-{
-    if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, true);
-}
-
 void glfw_key_callback(GLFWwindow* aWindow, int aKey, int aScancode, int aAction, int someMods)
 {
     OnGLFWKeyboardCallback(aKey, aAction);
@@ -117,24 +111,21 @@ int main()
     SetupGame();
     CreateWorld();
     
-    bool hasDestroyedShit = false;
     while(!glfwWindowShouldClose(window))
     {
-        processInput(window);
-        glfwPollEvents();
- 
         UpdateInputState(window);
+        glfwPollEvents();
+        
+        if(KeyDownThisFrame(DEK_ESCAPE))
+            glfwSetWindowShouldClose(window, true);
+        
+        if(KeyDownThisFrame(DEK_Q))
+            RemoveBlocksInSphere({32.f, 20.f, 32.f}, 15.f);
+
         UpdateTimer(frameTimer);
         float deltaTime = GetDeltaTime(frameTimer);
         
         UpdateCamera(deltaTime, myCamera);        
-        
-        if(KeyDown(DEK_Q) && !hasDestroyedShit)
-        {
-            RemoveBlocksInSphere({32.f, 20.f, 32.f}, 15.f);
-            hasDestroyedShit = true;
-        }
-         
         
         gfx_Clear();
         
