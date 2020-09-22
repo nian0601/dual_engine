@@ -29,9 +29,9 @@ struct Chunk
     int myMeshID = -1;
 };
 
-static const int WorldSize = 2;
-static const int WorldHeight = 2;
-static const int MaxChunksToCreatePerUpdate = 1;
+static const int WorldSize = 5;
+static const int WorldHeight = 3;
+static const int MaxChunksToCreatePerUpdate = 4;
 struct World
 {
     GrowingArray<Chunk*> myChunks;

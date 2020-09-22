@@ -96,11 +96,10 @@ int main()
     myCamera.myView = IdentityMatrix();
     myCamera.myInvertedView = IdentityMatrix();
 
-    //myCamera.myView = myCamera.myView * RotationMatrixX(pi * 0.25f);
-    //myCamera.myView = myCamera.myView * RotationMatrixY(pi * 0.25f);
-    //SetTranslation(myCamera.myView, {-30.f, 120.f, -55.f});
+    myCamera.myView = myCamera.myView * RotationMatrixX(pi * 0.25f);
+    SetTranslation(myCamera.myView, {-30.f, 120.f, -55.f});
     
-    SetTranslation(myCamera.myView, {-10.f, 10.f, -20.f});
+    //SetTranslation(myCamera.myView, {-10.f, 10.f, -20.f});
     
     gfx_SetCamera(&myCamera);
     
@@ -119,8 +118,10 @@ int main()
         if(KeyDownThisFrame(DEK_ESCAPE))
             glfwSetWindowShouldClose(window, true);
         
-        if(KeyDownThisFrame(DEK_Q))
-            RemoveBlocksInSphere({32.f, 20.f, 32.f}, 15.f);
+        if(KeyDownThisFrame(DEK_R))
+            ModifyBlocksInSphere({32.f, 20.f, 32.f}, 15.f, InvalidBlockType);
+        else if(KeyDownThisFrame(DEK_F))
+            ModifyBlocksInSphere({40.f, 24.f, 40.f}, 10.f, Grass);
 
         UpdateTimer(frameTimer);
         float deltaTime = GetDeltaTime(frameTimer);

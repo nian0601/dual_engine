@@ -244,8 +244,10 @@ void UpdateWorld()
     BuildChunkMeshes();
 }
 
-void ModifyBlocksInSphere(Chunk* aChunk, int aNewBlockType, const Vector3f& aPosition, float aRadius)
+bool ModifyBlocksInSphere(Chunk* aChunk, int aNewBlockType, const Vector3f& aPosition, float aRadius)
 {
+    bool wasModified = false;
+    
     Vector3f chunkCenter = aChunk->myWorldPosition + ChunkMidOffset;
     
     float blockSphereRadius = (aRadius + 0.5f) * (aRadius + 0.5f);
@@ -261,17 +263,28 @@ void ModifyBlocksInSphere(Chunk* aChunk, int aNewBlockType, const Vector3f& aPos
                 if(distToBlock <= blockSphereRadius)
                 {
                     int blockIndex = GetBlockIndex(x, y, z);
-                    aChunk->myBlocks[blockIndex] = aNewBlockType;
+                    
+                    if(aChunk->myBlocks[blockIndex] != aNewBlockType)
+                    {
+                        aChunk->myBlocks[blockIndex] = aNewBlockType;
+                        wasModified = true;
+                    }
+                    
                 }
             }
         }
     }
     
-    ArrayRemoveCyclic(ourGameState.myWorld.myChunksToRender, aChunk);
-    ArrayAdd(ourGameState.myWorld.myChunksToBuildMesh, aChunk);
+    if(wasModified)
+    {
+        ArrayRemoveCyclic(ourGameState.myWorld.myChunksToRender, aChunk);
+        ArrayAdd(ourGameState.myWorld.myChunksToBuildMesh, aChunk);
+    }
+    
+    return wasModified;
 }
 
-void RemoveBlocksInSphere(const Vector3f& aPosition, float aRadius)
+void ModifyBlocksInSphere(const Vector3f& aPosition, float aRadius, int aNewBlockType)
 {
     for(int i = 0; i < ourGameState.myWorld.myChunksToRender.myCount;)
     {
@@ -283,13 +296,11 @@ void RemoveBlocksInSphere(const Vector3f& aPosition, float aRadius)
         float combinedRadius = aRadius + (ChunkSize * 0.5f);
         combinedRadius *= combinedRadius;
         
+        bool chunkWasModified = false;
         if(distance <= combinedRadius)
-        {
-            ModifyBlocksInSphere(chunk, InvalidBlockType, aPosition, aRadius);
-        }
-        else
-        {
+            chunkWasModified = ModifyBlocksInSphere(chunk, aNewBlockType, aPosition, aRadius);
+        
+        if(!chunkWasModified)
             ++i;
-        }
     }
 }
