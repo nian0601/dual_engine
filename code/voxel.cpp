@@ -194,7 +194,8 @@ void CreateWorld()
 
 void RenderChunk(Chunk* aChunk)
 {
-    QueueMesh(aChunk->myMeshID, aChunk->myWorldPosition);
+    if(aChunk->myMeshID != -1)
+        QueueMesh(aChunk->myMeshID, aChunk->myWorldPosition);
 }
 
 void RenderWorld()
@@ -216,6 +217,7 @@ void InitChunks()
         FillChunk(chunk);
         
         ArrayAdd(ourGameState.myWorld.myChunksToBuildMesh, chunk);
+        ArrayAdd(ourGameState.myWorld.myChunksToRender, chunk);
         
         ++chunksRemoved;
     }
@@ -232,8 +234,6 @@ void BuildChunkMeshes()
         
         BuildChunkMesh(chunk);
         
-        ArrayAdd(ourGameState.myWorld.myChunksToRender, chunk);
-        
         ++chunksRemoved;
     }
 }
@@ -244,7 +244,7 @@ void UpdateWorld()
     BuildChunkMeshes();
 }
 
-bool ModifyBlocksInSphere(Chunk* aChunk, int aNewBlockType, const Vector3f& aPosition, float aRadius)
+void ModifyBlocksInSphere(Chunk* aChunk, int aNewBlockType, const Vector3f& aPosition, float aRadius)
 {
     bool wasModified = false;
     
@@ -277,16 +277,13 @@ bool ModifyBlocksInSphere(Chunk* aChunk, int aNewBlockType, const Vector3f& aPos
     
     if(wasModified)
     {
-        ArrayRemoveCyclic(ourGameState.myWorld.myChunksToRender, aChunk);
         ArrayAdd(ourGameState.myWorld.myChunksToBuildMesh, aChunk);
     }
-    
-    return wasModified;
 }
 
 void ModifyBlocksInSphere(const Vector3f& aPosition, float aRadius, int aNewBlockType)
 {
-    for(int i = 0; i < ourGameState.myWorld.myChunksToRender.myCount;)
+    for(int i = 0; i < ourGameState.myWorld.myChunksToRender.myCount; ++i)
     {
         Chunk* chunk = ourGameState.myWorld.myChunksToRender[i];
         
@@ -298,9 +295,113 @@ void ModifyBlocksInSphere(const Vector3f& aPosition, float aRadius, int aNewBloc
         
         bool chunkWasModified = false;
         if(distance <= combinedRadius)
-            chunkWasModified = ModifyBlocksInSphere(chunk, aNewBlockType, aPosition, aRadius);
+            ModifyBlocksInSphere(chunk, aNewBlockType, aPosition, aRadius);
+    }
+}
+
+void DoRaycast(const DE_Ray& aMouseRay, const ChunkSectionAABB& aSection, ChunkRaycastHit& outHits)
+{
+    Vector3f minPos = aSection.myChunk->myWorldPosition;
+    minPos.x += aSection.myX;
+    minPos.y += aSection.myY;
+    minPos.z += aSection.myZ;
+    
+    Vector3f maxPos = minPos;
+    maxPos.x += aSection.mySize;
+    maxPos.y += aSection.mySize;
+    maxPos.z += aSection.mySize;
+    
+    DE_AABB aabb = AABBFromPoints(minPos, maxPos);
+    float distance = LineVSAABB(aabb, aMouseRay, NULL);
+    
+    if(distance > -1.f)
+    {
+        if(aSection.mySize > 4)
+        {
+            int newSize = aSection.mySize / 2;
+            
+            ChunkSectionAABB section;
+            section.myChunk = aSection.myChunk;
+            section.mySize = newSize;
+            
+            for(int x = 0; x < 2; ++x)
+            {
+                for(int y = 0; y < 2; ++y)
+                {
+                    for(int z = 0; z < 2; ++z)
+                    {
+                        section.myX = aSection.myX + (newSize * x);
+                        section.myY = aSection.myY + (newSize * y);
+                        section.myZ = aSection.myZ + (newSize * z);
+                        
+                        DoRaycast(aMouseRay, section, outHits);
+                    }
+                }
+            }
+        }
+        else
+        {
+            int endX = aSection.myX + aSection.mySize;
+            for(int x = aSection.myX; x < endX; ++x)
+            {
+                int endY = aSection.myY + aSection.mySize;
+                for(int y = aSection.myY; y < endY; ++y)
+                {
+                    int endZ = aSection.myZ + aSection.mySize;
+                    for(int z = aSection.myZ; z < endZ; ++z)
+                    {
+                        BlockRaycastHit& hit = ArrayAdd(outHits.myBlockHits);
+                        hit.myX = x;
+                        hit.myY = y;
+                        hit.myZ = z;
+                    }
+                }
+            }
+        }
+    }
+}
+
+void ModifyBlockUnderMouse(const DE_Ray& aMouseRay, int aNewBlockType)
+{
+    GrowingArray<ChunkRaycastHit> raycastHits;
+    ArrayAlloc(raycastHits, 16);
+    
+    for(int i = 0; i < ourGameState.myWorld.myChunksToRender.myCount; ++i)
+    {
+        Chunk* chunk = ourGameState.myWorld.myChunksToRender[i];
+        Vector3f minPos = chunk->myWorldPosition;
+        Vector3f maxPos = minPos + ChunkExtents;
         
-        if(!chunkWasModified)
-            ++i;
+        ChunkSectionAABB section;
+        section.myChunk = chunk;
+        section.myX = 0;
+        section.myY = 0;
+        section.myZ = 0;
+        section.mySize = ChunkSize;
+        
+        ChunkRaycastHit& chunkHit = ArrayAdd(raycastHits);
+        chunkHit.myChunk = chunk;
+        ArrayAlloc(chunkHit.myBlockHits, 16);
+        DoRaycast(aMouseRay, section, chunkHit);
+    }
+    
+    for(int i = 0; i < raycastHits.myCount; ++i)
+    {
+        ChunkRaycastHit& chunkHit = raycastHits[i];
+        
+        bool wasEdited = false;
+        for(int j = 0; j < chunkHit.myBlockHits.myCount; ++j)
+        {
+            BlockRaycastHit& hit = chunkHit.myBlockHits[j];
+            int blockIndex = GetBlockIndex(hit.myX, hit.myY, hit.myZ);
+            if(chunkHit.myChunk->myBlocks[blockIndex] != aNewBlockType)
+            {
+                chunkHit.myChunk->myBlocks[blockIndex] = aNewBlockType;
+                wasEdited = true;
+            }
+        }
+        
+        if(wasEdited)
+            ArrayAdd(ourGameState.myWorld.myChunksToBuildMesh, chunkHit.myChunk);
     }
 }

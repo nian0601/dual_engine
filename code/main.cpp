@@ -122,6 +122,13 @@ int main()
             ModifyBlocksInSphere({32.f, 20.f, 32.f}, 15.f, InvalidBlockType);
         else if(KeyDownThisFrame(DEK_F))
             ModifyBlocksInSphere({40.f, 24.f, 40.f}, 10.f, Grass);
+        else if(KeyDownThisFrame(DEK_T))
+            ModifyBlocksInSphere({50.f, 20.f, 32.f}, 25.f, InvalidBlockType);
+        else if(KeyDownThisFrame(DEK_G))
+            ModifyBlocksInSphere({40.f, 24.f, 50.f}, 20.f, Grass);
+        
+        if(KeyDownThisFrame(DEK_J))
+            ModifyBlockUnderMouse(ourInput.myMouseRay, InvalidBlockType);
 
         UpdateTimer(frameTimer);
         float deltaTime = GetDeltaTime(frameTimer);
