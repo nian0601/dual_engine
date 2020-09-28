@@ -1,15 +1,25 @@
 int GetBlockIndex(int x, int y, int z)
 {
+    ASSERT(x >= 0 && x < ChunkSize);
+    ASSERT(y >= 0 && y < ChunkSize);
+    ASSERT(z >= 0 && z < ChunkSize);
+    
     return (x * ChunkSize * ChunkSize) + (y * ChunkSize) + z;
 }
 
 int GetBlockType(Chunk* aChunk, int x, int y, int z)
 {
-    ASSERT(x >= 0 && x < ChunkSize);
-    ASSERT(y >= 0 && y < ChunkSize);
-    ASSERT(z >= 0 && z < ChunkSize);
-    
     return aChunk->myBlocks[GetBlockIndex(x, y, z)];
+}
+
+bool SetBlockType(Chunk* aChunk, int x, int y, int z, int aNewBlockType)
+{
+    int currentType = GetBlockType(aChunk, x, y, z);
+    if(currentType == aNewBlockType)
+        return false;
+    
+    aChunk->myBlocks[GetBlockIndex(x, y, z)] = aNewBlockType;
+    return true;
 }
 
 Vector3f GetBlockCenterWorldPosition(Chunk* aChunk, int x, int y, int z)
@@ -299,7 +309,7 @@ void ModifyBlocksInSphere(const Vector3f& aPosition, float aRadius, int aNewBloc
     }
 }
 
-void DoRaycast(const DE_Ray& aMouseRay, const ChunkSectionAABB& aSection, ChunkRaycastHit& outHits)
+void DoRaycastTraversal(const DE_Ray& aMouseRay, const ChunkSectionAABB& aSection, bool aIgnoreInvalidBlock, ChunkRaycastHit& outHits)
 {
     Vector3f minPos = aSection.myChunk->myWorldPosition;
     minPos.x += aSection.myX;
@@ -312,11 +322,13 @@ void DoRaycast(const DE_Ray& aMouseRay, const ChunkSectionAABB& aSection, ChunkR
     maxPos.z += aSection.mySize;
     
     DE_AABB aabb = AABBFromPoints(minPos, maxPos);
-    float distance = LineVSAABB(aabb, aMouseRay, NULL);
+    Vector3f hitPosition;
+    float distance = LineVSAABB(aabb, aMouseRay, &hitPosition);
+    
     
     if(distance > -1.f)
     {
-        if(aSection.mySize > 4)
+        if(aSection.mySize > 1)
         {
             int newSize = aSection.mySize / 2;
             
@@ -334,30 +346,49 @@ void DoRaycast(const DE_Ray& aMouseRay, const ChunkSectionAABB& aSection, ChunkR
                         section.myY = aSection.myY + (newSize * y);
                         section.myZ = aSection.myZ + (newSize * z);
                         
-                        DoRaycast(aMouseRay, section, outHits);
+                        DoRaycastTraversal(aMouseRay, section, aIgnoreInvalidBlock, outHits);
                     }
                 }
             }
         }
         else
         {
-            int endX = aSection.myX + aSection.mySize;
-            for(int x = aSection.myX; x < endX; ++x)
+            int blockType = GetBlockType(aSection.myChunk, aSection.myX, aSection.myY, aSection.myZ);
+            if(!aIgnoreInvalidBlock || blockType != InvalidBlockType)
             {
-                int endY = aSection.myY + aSection.mySize;
-                for(int y = aSection.myY; y < endY; ++y)
-                {
-                    int endZ = aSection.myZ + aSection.mySize;
-                    for(int z = aSection.myZ; z < endZ; ++z)
-                    {
-                        BlockRaycastHit& hit = ArrayAdd(outHits.myBlockHits);
-                        hit.myX = x;
-                        hit.myY = y;
-                        hit.myZ = z;
-                    }
-                }
+                BlockRaycastHit& hit = ArrayAdd(outHits.myBlockHits);
+                hit.myX = aSection.myX;
+                hit.myY = aSection.myY;
+                hit.myZ = aSection.myZ;
+                hit.myRaycastDistance = distance;
+                hit.myHitPosition = hitPosition;
+                
+                if(distance < outHits.myClosestHit.myRaycastDistance)
+                    outHits.myClosestHit = hit;
             }
         }
+    }
+}
+
+void DoRaycast(const DE_Ray& aMouseRay, bool aIgnoreInvalidBlocks, GrowingArray<ChunkRaycastHit>& outHits)
+{
+    ChunkSectionAABB section;
+    section.myX = 0;
+    section.myY = 0;
+    section.myZ = 0;
+    section.mySize = ChunkSize;
+    
+    for(int i = 0; i < ourGameState.myWorld.myChunksToRender.myCount; ++i)
+    {
+        Chunk* chunk = ourGameState.myWorld.myChunksToRender[i];
+        section.myChunk = chunk;
+        
+        ChunkRaycastHit& chunkHit = ArrayAdd(outHits);
+        chunkHit.myChunk = chunk;
+        chunkHit.myClosestHit.myRaycastDistance = FLT_MAX;
+        ArrayAlloc(chunkHit.myBlockHits, 16);
+        
+        DoRaycastTraversal(aMouseRay, section, aIgnoreInvalidBlocks, chunkHit);
     }
 }
 
@@ -366,42 +397,25 @@ void ModifyBlockUnderMouse(const DE_Ray& aMouseRay, int aNewBlockType)
     GrowingArray<ChunkRaycastHit> raycastHits;
     ArrayAlloc(raycastHits, 16);
     
-    for(int i = 0; i < ourGameState.myWorld.myChunksToRender.myCount; ++i)
-    {
-        Chunk* chunk = ourGameState.myWorld.myChunksToRender[i];
-        Vector3f minPos = chunk->myWorldPosition;
-        Vector3f maxPos = minPos + ChunkExtents;
-        
-        ChunkSectionAABB section;
-        section.myChunk = chunk;
-        section.myX = 0;
-        section.myY = 0;
-        section.myZ = 0;
-        section.mySize = ChunkSize;
-        
-        ChunkRaycastHit& chunkHit = ArrayAdd(raycastHits);
-        chunkHit.myChunk = chunk;
-        ArrayAlloc(chunkHit.myBlockHits, 16);
-        DoRaycast(aMouseRay, section, chunkHit);
-    }
+    DoRaycast(aMouseRay, true, raycastHits);
     
+    int bestHit = -1;
+    float bestDistance = FLT_MAX;
     for(int i = 0; i < raycastHits.myCount; ++i)
     {
         ChunkRaycastHit& chunkHit = raycastHits[i];
-        
-        bool wasEdited = false;
-        for(int j = 0; j < chunkHit.myBlockHits.myCount; ++j)
+        if(chunkHit.myClosestHit.myRaycastDistance < bestDistance)
         {
-            BlockRaycastHit& hit = chunkHit.myBlockHits[j];
-            int blockIndex = GetBlockIndex(hit.myX, hit.myY, hit.myZ);
-            if(chunkHit.myChunk->myBlocks[blockIndex] != aNewBlockType)
-            {
-                chunkHit.myChunk->myBlocks[blockIndex] = aNewBlockType;
-                wasEdited = true;
-            }
+            bestDistance = chunkHit.myClosestHit.myRaycastDistance;
+            bestHit = i;
         }
-        
-        if(wasEdited)
+    }
+    
+    if(bestHit != -1)
+    {
+        ChunkRaycastHit& chunkHit = raycastHits[bestHit];
+        BlockRaycastHit& hit = chunkHit.myClosestHit;
+        if(SetBlockType(chunkHit.myChunk, hit.myX, hit.myY, hit.myZ, aNewBlockType))
             ArrayAdd(ourGameState.myWorld.myChunksToBuildMesh, chunkHit.myChunk);
     }
 }

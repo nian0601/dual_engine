@@ -36,11 +36,13 @@ struct BlockRaycastHit
     int myY;
     int myZ;
     float myRaycastDistance;
+    Vector3f myHitPosition;
 };
 
 struct ChunkRaycastHit
 {
     Chunk* myChunk;
+    BlockRaycastHit myClosestHit;
     GrowingArray<BlockRaycastHit> myBlockHits;
 };
 
@@ -53,8 +55,8 @@ struct ChunkSectionAABB
     int mySize;
 };
 
-static const int WorldSize = 5;
-static const int WorldHeight = 3;
+static const int WorldSize = 1;
+static const int WorldHeight = 1;
 static const int MaxChunksToCreatePerUpdate = 4;
 struct World
 {
