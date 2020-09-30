@@ -37,6 +37,11 @@ void FillChunk(Chunk* aChunk)
     
     int grassThickness = 1;
     int dirtThickness = 3;
+    
+    int stoneLevel = 20;
+    int grassLevel = 13;
+    int dirtLevel = 7;
+    int waterLevel = 5;
     for(int x = 0; x < ChunkSize; ++x)
     {
         int voxelX = aChunk->myChunkX * ChunkSize + x;
@@ -53,24 +58,21 @@ void FillChunk(Chunk* aChunk)
                 value += 1.f;
                 value *= 0.5f;
                 
-                int groundLevel = static_cast<int>(value * 30.f);
+                int terrainHeight = static_cast<int>(value * 30.f);
+                terrainHeight = max(terrainHeight, waterLevel);
                 
                 
                 int blockValue = InvalidBlockType;
-                if(voxelY <= groundLevel)
+                if(voxelY <= terrainHeight)
                 {
-                    if(voxelY == groundLevel)
-                    {
-                        blockValue = Grass;
-                    }
-                    else if(voxelY > groundLevel - dirtThickness)
-                    {
-                        blockValue = Dirt;
-                    }
-                    else
-                    {
+                    if(voxelY > stoneLevel)
                         blockValue = Stone;
-                    }
+                    else if(voxelY > grassLevel)
+                        blockValue = Grass;
+                    else if(voxelY > dirtLevel)
+                        blockValue = Dirt;
+                    else
+                        blockValue = Water;
                 }
                 ArrayAdd(aChunk->myBlocks, blockValue);
             }
@@ -132,7 +134,8 @@ void BuildChunkMesh(Chunk* aChunk)
                 {
                     case Grass: color = {0.05f, 0.75f, 0.1f, 1.f}; break;
                     case Dirt: color = {77.f/256.f, 39.f/256.f, 14.f/256.f, 1.f}; break;
-                    case Stone: color = {87.f/256.f, 83.f/256.f, 80.f/256.f, 1.f};
+                    case Stone: color = {87.f/256.f, 83.f/256.f, 80.f/256.f, 1.f}; break;
+                    case Water: color = {0.f/256.f, 25.f/256.f, 225.f/256.f, 1.f}; break;
                 }
                 
                 gfx_CreateCubeMesh(aChunk->myMeshID, float(x), float(y), float(z), color.x, color.y, color.z);
