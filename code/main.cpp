@@ -127,7 +127,7 @@ int main()
         else if(KeyDownThisFrame(DEK_G))
             ModifyBlocksInSphere({40.f, 24.f, 50.f}, 20.f, Grass);
         
-        if(KeyDownThisFrame(DEK_J))
+        if(MouseDown(DEK_LEFTMOUSE))
             ModifyBlockUnderMouse(ourInput.myMouseRay, InvalidBlockType);
 
         UpdateTimer(frameTimer);

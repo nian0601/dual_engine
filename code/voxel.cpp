@@ -104,22 +104,22 @@ void BuildChunkMesh(Chunk* aChunk)
                 if(!isXEdge && !isYEdge && !isZEdge)
                 {   
                     bool fullySurrounded = true;
-                    if(GetBlockType(aChunk, x - 1, y, z) != InvalidBlockType)
+                    if(GetBlockType(aChunk, x - 1, y, z) == InvalidBlockType)
                         fullySurrounded = false;
                     
-                    if(GetBlockType(aChunk, x + 1, y, z) != InvalidBlockType)
+                    if(GetBlockType(aChunk, x + 1, y, z) == InvalidBlockType)
                         fullySurrounded = false;
                     
-                    if(GetBlockType(aChunk, x, y - 1, z) != InvalidBlockType)
+                    if(GetBlockType(aChunk, x, y - 1, z) == InvalidBlockType)
                         fullySurrounded = false;
                     
-                    if(GetBlockType(aChunk, x, y + 1, z) != InvalidBlockType)
+                    if(GetBlockType(aChunk, x, y + 1, z) == InvalidBlockType)
                         fullySurrounded = false;
                     
-                    if(GetBlockType(aChunk, x, y, z - 1) != InvalidBlockType)
+                    if(GetBlockType(aChunk, x, y, z - 1) == InvalidBlockType)
                         fullySurrounded = false;
                     
-                    if(GetBlockType(aChunk, x, y, z + 1) != InvalidBlockType)
+                    if(GetBlockType(aChunk, x, y, z + 1) == InvalidBlockType)
                         fullySurrounded = false;
                     
                     if(fullySurrounded)
@@ -312,9 +312,9 @@ void ModifyBlocksInSphere(const Vector3f& aPosition, float aRadius, int aNewBloc
 void DoRaycastTraversal(const DE_Ray& aMouseRay, const ChunkSectionAABB& aSection, bool aIgnoreInvalidBlock, ChunkRaycastHit& outHits)
 {
     Vector3f minPos = aSection.myChunk->myWorldPosition;
-    minPos.x += aSection.myX;
-    minPos.y += aSection.myY;
-    minPos.z += aSection.myZ;
+    minPos.x += aSection.myX - 0.5f;
+    minPos.y += aSection.myY - 0.5f;
+    minPos.z += aSection.myZ - 0.5f;
     
     Vector3f maxPos = minPos;
     maxPos.x += aSection.mySize;
