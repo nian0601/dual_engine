@@ -33,9 +33,8 @@
 #include "entity.cpp"
 
 #include "game.h"
-#include "mapgenerator.cpp"
-#include "game.cpp"
 #include "voxel.cpp"
+#include "game.cpp"
 
 #include "opengl.cpp"
 
@@ -96,7 +95,7 @@ int main()
     myCamera.myView = IdentityMatrix();
     myCamera.myInvertedView = IdentityMatrix();
 
-    myCamera.myView = myCamera.myView * RotationMatrixX(pi * 0.25f);
+    //myCamera.myView = myCamera.myView * RotationMatrixX(pi * 0.25f);
     SetTranslation(myCamera.myView, {-30.f, 120.f, -55.f});
     
     //SetTranslation(myCamera.myView, {-10.f, 10.f, -20.f});
@@ -107,8 +106,9 @@ int main()
 
     SetupAssetStorage();
     SetupRenderer();
-    SetupGame();
     CreateWorld();
+    
+    ourGameState.myPlayerPosition = {20.f, 40.f, 20.f};
     
     while(!glfwWindowShouldClose(window))
     {
@@ -127,21 +127,26 @@ int main()
         else if(KeyDownThisFrame(DEK_G))
             ModifyBlocksInSphere({40.f, 24.f, 50.f}, 20.f, Grass);
         
-        if(MouseDown(DEK_LEFTMOUSE))
-            ModifyBlockUnderMouse(ourInput.myMouseRay, InvalidBlockType);
-
+        if(KeyDownThisFrame(DEK_Z))
+            ourGameState.myUseDebugCamera = !ourGameState.myUseDebugCamera;
+        
         UpdateTimer(frameTimer);
         float deltaTime = GetDeltaTime(frameTimer);
         
         UpdateCamera(deltaTime, myCamera);        
+
         
         gfx_Clear();
         
         gfx_Begin3D();
         UpdateWorld();
+        UpdatePlayer(deltaTime, myCamera);
+        
         RenderWorld();
+        RenderPlayer();
         
         PushRendererData();
+        
         gfx_FinishFrame();    
         
         glfwSwapBuffers(window);

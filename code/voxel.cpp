@@ -373,7 +373,7 @@ void DoRaycastTraversal(const DE_Ray& aMouseRay, const ChunkSectionAABB& aSectio
     }
 }
 
-void DoRaycast(const DE_Ray& aMouseRay, bool aIgnoreInvalidBlocks, GrowingArray<ChunkRaycastHit>& outHits)
+bool DoRaycast(const DE_Ray& aMouseRay, bool aIgnoreInvalidBlocks, GrowingArray<ChunkRaycastHit>& outHits)
 {
     ChunkSectionAABB section;
     section.myX = 0;
@@ -386,13 +386,20 @@ void DoRaycast(const DE_Ray& aMouseRay, bool aIgnoreInvalidBlocks, GrowingArray<
         Chunk* chunk = ourGameState.myWorld.myChunksToRender[i];
         section.myChunk = chunk;
         
-        ChunkRaycastHit& chunkHit = ArrayAdd(outHits);
+        ChunkRaycastHit chunkHit = {};
         chunkHit.myChunk = chunk;
         chunkHit.myClosestHit.myRaycastDistance = FLT_MAX;
         ArrayAlloc(chunkHit.myBlockHits, 16);
-        
+
         DoRaycastTraversal(aMouseRay, section, aIgnoreInvalidBlocks, chunkHit);
+        
+        if(chunkHit.myClosestHit.myRaycastDistance < FLT_MAX)
+        {
+            ArrayAdd(outHits, chunkHit);
+        }
     }
+    
+    return outHits.myCount > 0;
 }
 
 void ModifyBlockUnderMouse(const DE_Ray& aMouseRay, int aNewBlockType)

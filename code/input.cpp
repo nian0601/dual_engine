@@ -65,8 +65,7 @@ struct DE_Input
     
     DEInput_KeyState myKeyState[512];
     
-    bool myMouseState[DEK_MOUSECOUNT];
-    bool myPrevMouseState[DEK_MOUSECOUNT];
+    DEInput_KeyState myMouseState[DEK_MOUSECOUNT];
     Vector2f myMousePosition;
     Vector2f myMouseDelta;
     DE_Ray myMouseRay;
@@ -83,14 +82,10 @@ void OnGLFWKeyboardCallback(int aKey, int aAction)
 
 void OnGLFWMouseButtonCallback(int aButton, int aAction)
 {
-    if(aButton == GLFW_MOUSE_BUTTON_LEFT)
-    {
-        ourInput.myMouseState[DEK_LEFTMOUSE] = aAction == GLFW_PRESS;
-    }
-    else if(aButton == GLFW_MOUSE_BUTTON_RIGHT)
-    {
-        ourInput.myMouseState[DEK_RIGHTMOUSE] = aAction == GLFW_PRESS;
-    }
+    if(aAction == GLFW_RELEASE)
+        ourInput.myMouseState[aButton] = KeyState_ReleasedThisFrame;
+    else if(aAction == GLFW_PRESS)
+        ourInput.myMouseState[aButton] = KeyState_PressedThisFrame;
 }
 
 void UpdateInputState(GLFWwindow* aWindow)
@@ -98,6 +93,22 @@ void UpdateInputState(GLFWwindow* aWindow)
     for(int i = 0; i < 512; ++i)
     {
         DEInput_KeyState& keystate = ourInput.myKeyState[i];
+        switch(keystate)
+        {
+            case KeyState_None: break;
+            case KeyState_PressedThisFrame:
+            keystate = KeyState_HeldDown;
+            break;
+            case KeyState_HeldDown: break;
+            case KeyState_ReleasedThisFrame:
+            keystate = KeyState_None;
+            break;
+        }
+    }
+    
+    for(int i = 0; i < DEK_MOUSECOUNT; ++i)
+    {
+        DEInput_KeyState& keystate = ourInput.myMouseState[i];
         switch(keystate)
         {
             case KeyState_None: break;
@@ -139,17 +150,17 @@ bool KeyUp(int aKeyCode)
 }
 
 // Mouse
-bool MouseDownThisFrame(UCHAR aMouseKey)
+bool MouseDownThisFrame(int aMouseKey)
 { 
-    return !ourInput.myPrevMouseState[aMouseKey] && ourInput.myMouseState[aMouseKey];
+    return ourInput.myMouseState[aMouseKey] == KeyState_ReleasedThisFrame;
 }
 
-bool MouseDown(UCHAR aMouseKey)
+bool MouseDown(int aMouseKey)
 {
-    return ourInput.myMouseState[aMouseKey];
+    return ourInput.myMouseState[aMouseKey] == KeyState_HeldDown;
 }
 
-bool MouseUp(UCHAR aMouseKey)
+bool MouseUp(int aMouseKey)
 {
-    return ourInput.myPrevMouseState[aMouseKey] && !ourInput.myMouseState[aMouseKey];
+    return ourInput.myMouseState[aMouseKey] == KeyState_ReleasedThisFrame;
 }
