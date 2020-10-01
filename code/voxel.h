@@ -6,6 +6,7 @@ enum BlockType
     Stone,
     Dirt,
     Grass,
+    Water,
     BlockTypeCount,
 };
 
