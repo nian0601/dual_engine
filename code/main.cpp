@@ -70,6 +70,8 @@ int main()
     
     glfwSetKeyCallback(window, glfw_key_callback);
     glfwSetMouseButtonCallback(window, glfw_mousebutton_callback);
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    
     glfwMakeContextCurrent(window);
     
     if(!gladLoaderLoadGL())
@@ -94,11 +96,6 @@ int main()
     myCamera.myProjection = ProjectionMatrix(0.1f, 1000.f, float(windowHeight) / windowWidth, pi * 0.5f);
     myCamera.myView = IdentityMatrix();
     myCamera.myInvertedView = IdentityMatrix();
-
-    //myCamera.myView = myCamera.myView * RotationMatrixX(pi * 0.25f);
-    SetTranslation(myCamera.myView, {-30.f, 120.f, -55.f});
-    
-    //SetTranslation(myCamera.myView, {-10.f, 10.f, -20.f});
     
     gfx_SetCamera(&myCamera);
     
@@ -140,10 +137,15 @@ int main()
         
         gfx_Begin3D();
         UpdateWorld();
-        UpdatePlayer(deltaTime, myCamera);
+        
+        if(!ourGameState.myUseDebugCamera)
+            UpdatePlayer(deltaTime, myCamera);
+        
         
         RenderWorld();
-        RenderPlayer();
+        
+        if(ourGameState.myUseDebugCamera)
+            QueueCube(ourGameState.myPlayerPosition, {1.f, 1.f, 1.f, 1.f});
         
         PushRendererData();
         

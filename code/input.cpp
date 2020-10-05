@@ -41,6 +41,7 @@
 
 #define DEK_ESCAPE 256
 #define DEK_LSHIFT 340
+#define DEK_SPACE 32
 
 #define DEK_RIGHT 262
 #define DEK_LEFT 263

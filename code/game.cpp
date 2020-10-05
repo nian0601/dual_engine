@@ -1,5 +1,8 @@
 void UpdateCamera(float aDeltaTime, gfx_camera& aCamera)
 {
+    Vector3f cameraPosition = ourGameState.myPlayerPosition;
+    cameraPosition.y += 0.5f;
+    
     if(ourGameState.myUseDebugCamera)
     {
         float movement = 10.f;
@@ -27,38 +30,21 @@ void UpdateCamera(float aDeltaTime, gfx_camera& aCamera)
         if(KeyDown(DEK_E))
             TranslateUp(viewMatrix, movement);
         
-        if(MouseDown(DEK_RIGHTMOUSE))
-        {
-            if(Length(ourInput.myMouseDelta) > 0.f)
-            {
-                float rotationSpeed = 3.14f * 0.1f * aDeltaTime;
-                
-                
-                Vector4f translation = GetTranslation(aCamera.myView);
-                SetTranslation(aCamera.myView, {0.f, 0.f, 0.f});
-                
-                Matrix xRotation = RotationMatrixAxisAngle(aCamera.myView.myRows[0].myData, rotationSpeed * ourInput.myMouseDelta.y);
-                Matrix yRotation = RotationMatrixY(rotationSpeed * ourInput.myMouseDelta.x);
-                
-                aCamera.myView = aCamera.myView * xRotation;
-                aCamera.myView = aCamera.myView * yRotation;
-                
-                SetTranslation(aCamera.myView, {translation.x, translation.y, translation.z});
-            }
-        }
+        Vector4f translation = GetTranslation(aCamera.myView);
+        cameraPosition = {translation.x, translation.y, translation.z};
     }
-    else
-    {
-        float rotationSpeed = 3.14f * 0.1f * aDeltaTime;
-        
-        SetTranslation(aCamera.myView, {0.f, 0.f, 0.f});
-        Matrix yRotation = RotationMatrixY(rotationSpeed * ourInput.myMouseDelta.x);
-        aCamera.myView = aCamera.myView * yRotation;
-        
-        Vector3f cameraPosition = ourGameState.myPlayerPosition;
-        cameraPosition.y += 0.5f;
-        SetTranslation(aCamera.myView, cameraPosition);
-    }
+
+    float rotationSpeed = 3.14f * 0.1f * aDeltaTime;
+    
+    SetTranslation(aCamera.myView, {0.f, 0.f, 0.f});
+    
+    Matrix xRotation = RotationMatrixAxisAngle(aCamera.myView.myRows[0].myData, rotationSpeed * ourInput.myMouseDelta.y);
+    Matrix yRotation = RotationMatrixY(rotationSpeed * ourInput.myMouseDelta.x);
+    
+    aCamera.myView = aCamera.myView * xRotation;
+    aCamera.myView = aCamera.myView * yRotation;
+
+    SetTranslation(aCamera.myView, cameraPosition);
     
     aCamera.myInvertedView = InverseSimple(aCamera.myView);
     ourInput.myMouseRay.myStart = Unproject(
@@ -67,64 +53,38 @@ void UpdateCamera(float aDeltaTime, gfx_camera& aCamera)
         ourInput.myMousePosition, 1.f, aCamera.myInvertedView, aCamera.myProjection, aCamera.myWindowSize);
 }
 
-void UpdatePlayer(float aDeltaTime, gfx_camera& aCamera)
+void UpdatePlayerVelocity(float aDeltaTime, gfx_camera& aCamera)
 {
-    if(ourGameState.myUseDebugCamera)
-        return;
-    
-    
-    DE_Ray movementRay;
-    movementRay.myStart = ourGameState.myPlayerPosition;
-    
-    GrowingArray<ChunkRaycastHit> hits;
-    ArrayAlloc(hits, 8);
-    
-    float gravity = 9.82f * aDeltaTime;
-    movementRay.myEnd = movementRay.myStart;
-    movementRay.myEnd.y -= gravity * 2;
-    if(DoRaycast(movementRay, true, hits))
-        gravity = 0.f;
-    
-    
-    Vector3f forward = aCamera.myView.myRows[2].myData;
+    // Use the Cross-product to figure out where 'forward' is regardless
+    // of X-rotation of the camera
     Vector3f right = aCamera.myView.myRows[0].myData;
+    Vector3f up = {0.f, 1.f, 0.f};
+    Vector3f forward = Cross(right, up);
+
+    float moveSpeed = 10.f;
+    right *= moveSpeed;
+    forward *= moveSpeed;
     
-    Vector3f moveDir = {};
+    ourGameState.myPlayerVelocity.x = 0.f;
+    ourGameState.myPlayerVelocity.z = 0.f;
     
     if(KeyDown(DEK_A))
-        moveDir -= right;
+        ourGameState.myPlayerVelocity -= right;
     if(KeyDown(DEK_D))
-        moveDir += right;
+        ourGameState.myPlayerVelocity += right;
     
     if(KeyDown(DEK_W))
-        moveDir += forward;
+        ourGameState.myPlayerVelocity += forward;
     if(KeyDown(DEK_S))
-        moveDir -= forward;
+        ourGameState.myPlayerVelocity -= forward;    
     
-    Normalize(moveDir);
-    float moveSpeed = 10.f;
+    if(KeyDownThisFrame(DEK_SPACE))
+        ourGameState.myPlayerVelocity.y += 20.f * aDeltaTime;
     
-    moveDir *= moveSpeed;
-    moveDir *= aDeltaTime;
+    ourGameState.myPlayerVelocity.y -= 0.25f * aDeltaTime;
     
-    movementRay.myEnd = movementRay.myStart;
-    movementRay.myEnd.x += moveDir.x;
-    
-    ArrayClear(hits);
-    if(DoRaycast(movementRay, true, hits))
-        moveDir.x = 0.f;
-    
-    movementRay.myEnd = movementRay.myStart;
-    movementRay.myEnd.z += moveDir.z;
-    
-    ArrayClear(hits);
-    if(DoRaycast(movementRay, true, hits))
-        moveDir.z = 0.f;
-    
-
-    ourGameState.myPlayerPosition += moveDir;
-    ourGameState.myPlayerPosition.y -= gravity;
-    
+    ourGameState.myPlayerVelocity.x *= aDeltaTime;
+    ourGameState.myPlayerVelocity.z *= aDeltaTime;
     
     if(MouseDownThisFrame(DEK_LEFTMOUSE))
     {
@@ -139,8 +99,34 @@ void UpdatePlayer(float aDeltaTime, gfx_camera& aCamera)
     }
 }
 
-void RenderPlayer()
-{
-    if(ourGameState.myUseDebugCamera)
-        QueueCube(ourGameState.myPlayerPosition, {1.f, 1.f, 1.f, 1.f});
+void UpdatePlayer(float aDeltaTime, gfx_camera& aCamera)
+{   
+    UpdatePlayerVelocity(aDeltaTime, aCamera);
+    
+    DE_Ray movementRay;
+    movementRay.myStart = ourGameState.myPlayerPosition;
+    
+    GrowingArray<ChunkRaycastHit> hits;
+    ArrayAlloc(hits, 8);
+    
+    movementRay.myEnd = movementRay.myStart;
+    movementRay.myEnd.y += ourGameState.myPlayerVelocity.y * 2;
+    if(DoRaycast(movementRay, true, hits))
+        ourGameState.myPlayerVelocity.y = 0.f;
+    
+    movementRay.myEnd = movementRay.myStart;
+    movementRay.myEnd.x += ourGameState.myPlayerVelocity.x;
+    
+    ArrayClear(hits);
+    if(DoRaycast(movementRay, true, hits))
+        ourGameState.myPlayerVelocity.x = 0.f;
+    
+    movementRay.myEnd = movementRay.myStart;
+    movementRay.myEnd.z += ourGameState.myPlayerVelocity.z;
+    
+    ArrayClear(hits);
+    if(DoRaycast(movementRay, true, hits))
+        ourGameState.myPlayerVelocity.z = 0.f;
+    
+    ourGameState.myPlayerPosition += ourGameState.myPlayerVelocity;
 }
