@@ -323,6 +323,15 @@ float Dot(const Vector3f& aFirst, const Vector3f& aSecond)
     return aFirst.x * aSecond.x + aFirst.y * aSecond.y + aFirst.z * aSecond.z;
 }
 
+Vector3f Cross(const Vector3f& aFirst, const Vector3f& aSecond)
+{
+    Vector3f result;
+    result.x = aFirst.y * aSecond.z - aFirst.z * aSecond.y;
+    result.y = aFirst.z * aSecond.x - aFirst.x * aSecond.z;
+    result.z = aFirst.x * aSecond.y - aFirst.y * aSecond.x;
+    return result;
+}
+
 float Length2(const Vector3f& aVector)
 {
     return Dot(aVector, aVector);
