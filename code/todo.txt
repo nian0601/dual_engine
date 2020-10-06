@@ -1,0 +1,19 @@
+Rendering
+
+- Only generate the out-most faces of each chunk instead of having a full cube there
+- Render Water-blocks separately with alpha enabled
+- Deferred rendering
+- SSAO
+- PointLights
+- Shadows
+
+Gameplay
+
+- Snap playerposition to terrain when the movement-raycast hits something
+- Add option to place blocks
+
+Engine
+
+- Implement "streaming box", where only Chunks within the box is loaded
+-- Chunks that gets unloaded should *NOT* lose their data, just have their mesh destroyed
+- Add support for IMGui
