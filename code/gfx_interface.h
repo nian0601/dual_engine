@@ -41,6 +41,16 @@ void gfx_ClearMesh(int aMeshID);
 int gfx_AddVertexToMesh(int aMeshID, const Vector4f& aPosition, const Vector4f& aNormal, const Vector4f& aColor);
 void gfx_AddTriangleToMesh(int aMeshID, int aFirstVertexIndex, int aSecondVertexIndex, int aThirdVertexIndex);
 
-void  gfx_CreateCubeMesh(int aMeshID, float x, float y, float z, float r, float g, float b);
+enum gfx_CubeMeshFlags
+{
+    LEFT = 1 << 0,
+    RIGHT = 1 << 1,
+    TOP =  1 << 2,
+    BOTTOM = 1 << 3,
+    FRONT = 1 << 4,
+    BACK = 1 << 5,
+    ALL = LEFT | RIGHT | TOP | BOTTOM | FRONT | BACK,
+};
+void  gfx_CreateCubeMesh(int aMeshID, float x, float y, float z, float r, float g, float b, int someFlags);
 
 void gfx_FinishMesh(int aMeshID);

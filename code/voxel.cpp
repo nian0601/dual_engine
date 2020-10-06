@@ -93,40 +93,10 @@ void BuildChunkMesh(Chunk* aChunk)
         {
             for(int z = 0; z < ChunkSize; ++z)
             {
-                int index = GetBlockIndex(x, y, z);
-                int blockType = aChunk->myBlocks[index];
+                int blockType = GetBlockType(aChunk, x, y, z);
                 
                 if(blockType == InvalidBlockType)
                     continue;
-                
-                bool isXEdge = x == 0 || x == ChunkSize - 1;
-                bool isYEdge = y == 0 || y == ChunkSize - 1;
-                bool isZEdge = z == 0 || z == ChunkSize - 1;
-                
-                if(!isXEdge && !isYEdge && !isZEdge)
-                {   
-                    bool fullySurrounded = true;
-                    if(GetBlockType(aChunk, x - 1, y, z) == InvalidBlockType)
-                        fullySurrounded = false;
-                    
-                    if(GetBlockType(aChunk, x + 1, y, z) == InvalidBlockType)
-                        fullySurrounded = false;
-                    
-                    if(GetBlockType(aChunk, x, y - 1, z) == InvalidBlockType)
-                        fullySurrounded = false;
-                    
-                    if(GetBlockType(aChunk, x, y + 1, z) == InvalidBlockType)
-                        fullySurrounded = false;
-                    
-                    if(GetBlockType(aChunk, x, y, z - 1) == InvalidBlockType)
-                        fullySurrounded = false;
-                    
-                    if(GetBlockType(aChunk, x, y, z + 1) == InvalidBlockType)
-                        fullySurrounded = false;
-                    
-                    if(fullySurrounded)
-                        continue;
-                }
                 
                 Vector4f color = {0.f, 0.f, 0.f, 1.f};
                 
@@ -138,7 +108,27 @@ void BuildChunkMesh(Chunk* aChunk)
                     case Water: color = {0.f/256.f, 25.f/256.f, 225.f/256.f, 1.f}; break;
                 }
                 
-                gfx_CreateCubeMesh(aChunk->myMeshID, float(x), float(y), float(z), color.x, color.y, color.z);
+                int meshFlags = 0;
+                
+                if(x == 0 || GetBlockType(aChunk, x - 1, y, z) == InvalidBlockType)
+                    meshFlags |= gfx_CubeMeshFlags::LEFT;
+                
+                if(x == ChunkSize - 1 || GetBlockType(aChunk, x + 1, y, z) == InvalidBlockType)
+                    meshFlags |= gfx_CubeMeshFlags::RIGHT;
+                
+                if(y == 0 || GetBlockType(aChunk, x, y - 1, z) == InvalidBlockType)
+                    meshFlags |= gfx_CubeMeshFlags::BOTTOM;
+                
+                if(y == ChunkSize - 1 || GetBlockType(aChunk, x, y + 1, z) == InvalidBlockType)
+                    meshFlags |= gfx_CubeMeshFlags::TOP;
+                
+                if(z == 0 || GetBlockType(aChunk, x, y, z - 1) == InvalidBlockType)
+                    meshFlags |= gfx_CubeMeshFlags::FRONT;
+                
+                if(z == ChunkSize - 1 || GetBlockType(aChunk, x, y, z + 1) == InvalidBlockType)
+                    meshFlags |= gfx_CubeMeshFlags::BACK;
+                
+                gfx_CreateCubeMesh(aChunk->myMeshID, float(x), float(y), float(z), color.x, color.y, color.z, meshFlags);
             }
         }
     }

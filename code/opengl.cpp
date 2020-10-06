@@ -100,7 +100,7 @@ unsigned int OpenGL_CreateShader(const char* aVertexName, const char* aPixelName
 void OpenGL_CreateCube()
 {
     int meshID = gfx_CreateMesh();
-    gfx_CreateCubeMesh(meshID, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f);
+    gfx_CreateCubeMesh(meshID, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f, gfx_CubeMeshFlags::ALL);
     gfx_FinishMesh(meshID);
     
     ourOpenGL_Context.myCube = ourOpenGL_Context.myMeshes[meshID];
@@ -437,7 +437,7 @@ void gfx_FinishMesh(int aMeshID)
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(mesh.myIndices[0]) * mesh.myIndices.myCount, mesh.myIndices.myData, GL_STATIC_DRAW);
 }
 
-void gfx_CreateCubeMesh(int aMeshID, float x, float y, float z, float r, float g, float b)
+void gfx_CreateCubeMesh(int aMeshID, float x, float y, float z, float r, float g, float b, int someFlags)
 {
     // Create our Vertices
     float width = 0.5f;
@@ -448,62 +448,80 @@ void gfx_CreateCubeMesh(int aMeshID, float x, float y, float z, float r, float g
     Vector4f color = {r, g, b, 1.f};
     
     //0 - 3 (Top)
-    normal = {0.f, 1.f, 0.f, 0.f};
-    int v0 = gfx_AddVertexToMesh(aMeshID, { x - width, y + height, z - depth, 1.f }, normal, color);
-    int v1 = gfx_AddVertexToMesh(aMeshID, { x + width, y + height, z - depth, 1.f }, normal, color);
-    int v2 = gfx_AddVertexToMesh(aMeshID, { x + width, y + height, z + depth, 1.f }, normal, color);
-    int v3 = gfx_AddVertexToMesh(aMeshID, { x - width, y + height, z + depth, 1.f }, normal, color);
-    
-    gfx_AddTriangleToMesh(aMeshID, v3, v1, v0);
-    gfx_AddTriangleToMesh(aMeshID, v2, v1, v3);
+    if((someFlags & gfx_CubeMeshFlags::TOP) > 0)
+    {
+        normal = {0.f, 1.f, 0.f, 0.f};
+        int v0 = gfx_AddVertexToMesh(aMeshID, { x - width, y + height, z - depth, 1.f }, normal, color);
+        int v1 = gfx_AddVertexToMesh(aMeshID, { x + width, y + height, z - depth, 1.f }, normal, color);
+        int v2 = gfx_AddVertexToMesh(aMeshID, { x + width, y + height, z + depth, 1.f }, normal, color);
+        int v3 = gfx_AddVertexToMesh(aMeshID, { x - width, y + height, z + depth, 1.f }, normal, color);
+        
+        gfx_AddTriangleToMesh(aMeshID, v3, v1, v0);
+        gfx_AddTriangleToMesh(aMeshID, v2, v1, v3);
+    }
     
 	//4 - 7 (Bottom)
-    normal = {0.f, -1.f, 0.f, 0.f};
-    int v4 = gfx_AddVertexToMesh(aMeshID, { x - width, y - height, z - depth, 1.f }, normal, color);
-    int v5 = gfx_AddVertexToMesh(aMeshID, { x + width, y - height, z - depth, 1.f }, normal, color);
-    int v6 = gfx_AddVertexToMesh(aMeshID, { x + width, y - height, z + depth, 1.f }, normal, color);
-    int v7 = gfx_AddVertexToMesh(aMeshID, { x - width, y - height, z + depth, 1.f }, normal, color);
+    if((someFlags & gfx_CubeMeshFlags::BOTTOM) > 0)
+    {
+        normal = {0.f, -1.f, 0.f, 0.f};
+        int v4 = gfx_AddVertexToMesh(aMeshID, { x - width, y - height, z - depth, 1.f }, normal, color);
+        int v5 = gfx_AddVertexToMesh(aMeshID, { x + width, y - height, z - depth, 1.f }, normal, color);
+        int v6 = gfx_AddVertexToMesh(aMeshID, { x + width, y - height, z + depth, 1.f }, normal, color);
+        int v7 = gfx_AddVertexToMesh(aMeshID, { x - width, y - height, z + depth, 1.f }, normal, color);
+        
+        gfx_AddTriangleToMesh(aMeshID, v6, v4, v5);
+        gfx_AddTriangleToMesh(aMeshID, v7, v4, v6);
+    }
     
-    gfx_AddTriangleToMesh(aMeshID, v6, v4, v5);
-    gfx_AddTriangleToMesh(aMeshID, v7, v4, v6);
-    
-	//8 - 11 (Left)
-    normal = {-1.f, 0.f, 0.f, 0.f};
-    int v8 = gfx_AddVertexToMesh(aMeshID, { x - width, y - height, z + depth, 1.f }, normal, color);
-    int v9 = gfx_AddVertexToMesh(aMeshID, { x - width, y - height, z - depth, 1.f }, normal, color);
-    int v10 = gfx_AddVertexToMesh(aMeshID, { x - width, y + height, z - depth, 1.f }, normal, color);
-    int v11 = gfx_AddVertexToMesh(aMeshID, { x - width, y + height, z + depth, 1.f }, normal, color);
-    
-    gfx_AddTriangleToMesh(aMeshID, v11, v9, v8);
-    gfx_AddTriangleToMesh(aMeshID, v10, v9, v11);
-    
+    //8 - 11 (Left)
+    if((someFlags & gfx_CubeMeshFlags::LEFT) > 0)
+    {
+        normal = {-1.f, 0.f, 0.f, 0.f};
+        int v8 = gfx_AddVertexToMesh(aMeshID, { x - width, y - height, z + depth, 1.f }, normal, color);
+        int v9 = gfx_AddVertexToMesh(aMeshID, { x - width, y - height, z - depth, 1.f }, normal, color);
+        int v10 = gfx_AddVertexToMesh(aMeshID, { x - width, y + height, z - depth, 1.f }, normal, color);
+        int v11 = gfx_AddVertexToMesh(aMeshID, { x - width, y + height, z + depth, 1.f }, normal, color);
+        
+        gfx_AddTriangleToMesh(aMeshID, v11, v9, v8);
+        gfx_AddTriangleToMesh(aMeshID, v10, v9, v11);
+    }
+        
 	//12 - 15 (Right)
-    normal = {1.f, 0.f, 0.f, 0.f};
-    int v12 = gfx_AddVertexToMesh(aMeshID, { x + width, y - height, z + depth, 1.f }, normal, color);
-    int v13 = gfx_AddVertexToMesh(aMeshID, { x + width, y - height, z - depth, 1.f }, normal, color);
-    int v14 = gfx_AddVertexToMesh(aMeshID, { x + width, y + height, z - depth, 1.f }, normal, color);
-    int v15 = gfx_AddVertexToMesh(aMeshID, { x + width, y + height, z + depth, 1.f }, normal, color);
-    
-    gfx_AddTriangleToMesh(aMeshID, v14, v12, v13);
-    gfx_AddTriangleToMesh(aMeshID, v15, v12, v14);
+    if((someFlags & gfx_CubeMeshFlags::RIGHT) > 0)
+    {
+        normal = {1.f, 0.f, 0.f, 0.f};
+        int v12 = gfx_AddVertexToMesh(aMeshID, { x + width, y - height, z + depth, 1.f }, normal, color);
+        int v13 = gfx_AddVertexToMesh(aMeshID, { x + width, y - height, z - depth, 1.f }, normal, color);
+        int v14 = gfx_AddVertexToMesh(aMeshID, { x + width, y + height, z - depth, 1.f }, normal, color);
+        int v15 = gfx_AddVertexToMesh(aMeshID, { x + width, y + height, z + depth, 1.f }, normal, color);
+        
+        gfx_AddTriangleToMesh(aMeshID, v14, v12, v13);
+        gfx_AddTriangleToMesh(aMeshID, v15, v12, v14);
+    }
     
 	//16 - 19 (Front)
-    normal = {0.f, 0.f, -1.f, 0.f};
-    int v16 = gfx_AddVertexToMesh(aMeshID, { x - width, y - height, z - depth, 1.f }, normal, color);
-    int v17 = gfx_AddVertexToMesh(aMeshID, { x + width, y - height, z - depth, 1.f }, normal, color);
-    int v18 = gfx_AddVertexToMesh(aMeshID, { x + width, y + height, z - depth, 1.f }, normal, color);
-    int v19 = gfx_AddVertexToMesh(aMeshID, { x - width, y + height, z - depth, 1.f }, normal, color);
-    
-    gfx_AddTriangleToMesh(aMeshID, v19, v17, v16);
-    gfx_AddTriangleToMesh(aMeshID, v18, v17, v19);
+    if((someFlags & gfx_CubeMeshFlags::FRONT) > 0)
+    {
+        normal = {0.f, 0.f, -1.f, 0.f};
+        int v16 = gfx_AddVertexToMesh(aMeshID, { x - width, y - height, z - depth, 1.f }, normal, color);
+        int v17 = gfx_AddVertexToMesh(aMeshID, { x + width, y - height, z - depth, 1.f }, normal, color);
+        int v18 = gfx_AddVertexToMesh(aMeshID, { x + width, y + height, z - depth, 1.f }, normal, color);
+        int v19 = gfx_AddVertexToMesh(aMeshID, { x - width, y + height, z - depth, 1.f }, normal, color);
+        
+        gfx_AddTriangleToMesh(aMeshID, v19, v17, v16);
+        gfx_AddTriangleToMesh(aMeshID, v18, v17, v19);
+    }
     
 	//20 - 23 (Back)
-    normal = {0.f, 0.f, 1.f, 0.f};
-    int v20 = gfx_AddVertexToMesh(aMeshID, { x - width, y - height, z + depth, 1.f }, normal, color);
-    int v21 = gfx_AddVertexToMesh(aMeshID, { x + width, y - height, z + depth, 1.f }, normal, color);
-    int v22 = gfx_AddVertexToMesh(aMeshID, { x + width, y + height, z + depth, 1.f }, normal, color);
-    int v23 = gfx_AddVertexToMesh(aMeshID, { x - width, y + height, z + depth, 1.f }, normal, color);
-    
-    gfx_AddTriangleToMesh(aMeshID, v22, v20, v21);
-    gfx_AddTriangleToMesh(aMeshID, v23, v20, v22);
+    if((someFlags & gfx_CubeMeshFlags::BACK) > 0)
+    {
+        normal = {0.f, 0.f, 1.f, 0.f};
+        int v20 = gfx_AddVertexToMesh(aMeshID, { x - width, y - height, z + depth, 1.f }, normal, color);
+        int v21 = gfx_AddVertexToMesh(aMeshID, { x + width, y - height, z + depth, 1.f }, normal, color);
+        int v22 = gfx_AddVertexToMesh(aMeshID, { x + width, y + height, z + depth, 1.f }, normal, color);
+        int v23 = gfx_AddVertexToMesh(aMeshID, { x - width, y + height, z + depth, 1.f }, normal, color);
+        
+        gfx_AddTriangleToMesh(aMeshID, v22, v20, v21);
+        gfx_AddTriangleToMesh(aMeshID, v23, v20, v22);
+    }
 }
