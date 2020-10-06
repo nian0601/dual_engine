@@ -72,7 +72,7 @@ AssetInfo GetBitmap(const char* aFilePath)
     unsigned char* data = stbi_load(aFilePath, &width, &height, &nrChannels, 4);
     ASSERT(data != NULL);
     
-    unsigned int texture = gfx_CreateTexture(width, height, RGBA, data);
+    unsigned int texture = OpenGL_CreateTexture(width, height, RGBA, data);
     stbi_image_free(data);
     
     Asset& asset = ArrayAdd(ourAssets.myBitmaps);
@@ -119,7 +119,7 @@ AssetInfo GetCharBitmap(char aCharCode)
     int  advance;
     stbtt_GetCodepointHMetrics(&font, aCharCode, &advance, NULL);
     
-    unsigned int textureID = gfx_CreateTexture(width, height, SINGLE_CHANNEL, bitmap);
+    unsigned int textureID = OpenGL_CreateTexture(width, height, SINGLE_CHANNEL, bitmap);
     stbtt_FreeBitmap(bitmap, NULL);
     
     Asset& asset = ArrayAdd(ourAssets.myDebugFont.myBitmaps);

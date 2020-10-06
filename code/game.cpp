@@ -1,4 +1,4 @@
-void UpdateCamera(float aDeltaTime, gfx_camera& aCamera)
+void UpdateCamera(float aDeltaTime, Camera& aCamera)
 {
     Vector3f cameraPosition = ourGameState.myPlayerPosition;
     cameraPosition.y += 0.5f;
@@ -53,7 +53,7 @@ void UpdateCamera(float aDeltaTime, gfx_camera& aCamera)
         ourInput.myMousePosition, 1.f, aCamera.myInvertedView, aCamera.myProjection, aCamera.myWindowSize);
 }
 
-void UpdatePlayerVelocity(float aDeltaTime, gfx_camera& aCamera)
+void UpdatePlayerVelocity(float aDeltaTime, Camera& aCamera)
 {
     // Use the Cross-product to figure out where 'forward' is regardless
     // of X-rotation of the camera
@@ -99,7 +99,7 @@ void UpdatePlayerVelocity(float aDeltaTime, gfx_camera& aCamera)
     }
 }
 
-void UpdatePlayer(float aDeltaTime, gfx_camera& aCamera)
+void UpdatePlayer(float aDeltaTime, Camera& aCamera)
 {   
     UpdatePlayerVelocity(aDeltaTime, aCamera);
     

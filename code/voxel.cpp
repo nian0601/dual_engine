@@ -83,9 +83,9 @@ void FillChunk(Chunk* aChunk)
 void BuildChunkMesh(Chunk* aChunk)
 {
     if(aChunk->myMeshID == -1)
-        aChunk->myMeshID = gfx_CreateMesh();
+        aChunk->myMeshID = OpenGL_CreateMesh();
     
-    gfx_ClearMesh(aChunk->myMeshID);
+    OpenGL_ClearMesh(aChunk->myMeshID);
     
     for(int x = 0; x < ChunkSize; ++x)
     {       
@@ -111,29 +111,29 @@ void BuildChunkMesh(Chunk* aChunk)
                 int meshFlags = 0;
                 
                 if(x == 0 || GetBlockType(aChunk, x - 1, y, z) == InvalidBlockType)
-                    meshFlags |= gfx_CubeMeshFlags::LEFT;
+                    meshFlags |= OpenGL_CubeMeshFlags::LEFT;
                 
                 if(x == ChunkSize - 1 || GetBlockType(aChunk, x + 1, y, z) == InvalidBlockType)
-                    meshFlags |= gfx_CubeMeshFlags::RIGHT;
+                    meshFlags |= OpenGL_CubeMeshFlags::RIGHT;
                 
                 if(y == 0 || GetBlockType(aChunk, x, y - 1, z) == InvalidBlockType)
-                    meshFlags |= gfx_CubeMeshFlags::BOTTOM;
+                    meshFlags |= OpenGL_CubeMeshFlags::BOTTOM;
                 
                 if(y == ChunkSize - 1 || GetBlockType(aChunk, x, y + 1, z) == InvalidBlockType)
-                    meshFlags |= gfx_CubeMeshFlags::TOP;
+                    meshFlags |= OpenGL_CubeMeshFlags::TOP;
                 
                 if(z == 0 || GetBlockType(aChunk, x, y, z - 1) == InvalidBlockType)
-                    meshFlags |= gfx_CubeMeshFlags::FRONT;
+                    meshFlags |= OpenGL_CubeMeshFlags::FRONT;
                 
                 if(z == ChunkSize - 1 || GetBlockType(aChunk, x, y, z + 1) == InvalidBlockType)
-                    meshFlags |= gfx_CubeMeshFlags::BACK;
+                    meshFlags |= OpenGL_CubeMeshFlags::BACK;
                 
-                gfx_CreateCubeMesh(aChunk->myMeshID, float(x), float(y), float(z), color.x, color.y, color.z, meshFlags);
+                OpenGL_CreateCubeMesh(aChunk->myMeshID, float(x), float(y), float(z), color.x, color.y, color.z, meshFlags);
             }
         }
     }
     
-    gfx_FinishMesh(aChunk->myMeshID);
+    OpenGL_FinishMesh(aChunk->myMeshID);
 }
 
 void CreateWorld()
@@ -245,6 +245,8 @@ void UpdateWorld()
 {
     InitChunks();
     BuildChunkMeshes();
+    
+    RenderWorld();
 }
 
 void ModifyBlocksInSphere(Chunk* aChunk, int aNewBlockType, const Vector3f& aPosition, float aRadius)

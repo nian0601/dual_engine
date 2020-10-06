@@ -1,3 +1,13 @@
+struct Camera
+{
+    Matrix myProjection;
+    Matrix myView;
+    Matrix myInvertedView;
+    Vector2f myWindowSize;
+    Vector2f myScreenSize;
+};
+
+
 struct QuadData
 {
     unsigned int myTextureID;
@@ -26,6 +36,13 @@ struct RenderContext
     GrowingArray<QuadData> myQuads;
     GrowingArray<CubeData> myCubes;
     GrowingArray<MeshData> myMeshes;
+    
+    int myCubeMeshID;
+    int myQuadMeshID;
+    
+    unsigned int myMeshShader;
+    unsigned int myQuadShader;
+    unsigned int myTextShader;
 };
 
 static RenderContext ourRenderContext;
@@ -38,6 +55,17 @@ void SetupRenderer()
     ArrayAlloc(ourRenderContext.myQuads, 16);
     ArrayAlloc(ourRenderContext.myCubes, 16);
     ArrayAlloc(ourRenderContext.myMeshes, 16);
+    
+    ourRenderContext.myMeshShader = OpenGL_CreateShader("mesh.vx", "mesh.px");
+    ourRenderContext.myQuadShader = OpenGL_CreateShader("quad.vx", "quad.px");
+    ourRenderContext.myTextShader = OpenGL_CreateShader("text.vx", "text.px");
+    
+    int meshID = OpenGL_CreateMesh();
+    OpenGL_CreateCubeMesh(meshID, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f, OpenGL_CubeMeshFlags::ALL);
+    OpenGL_FinishMesh(meshID);
+    ourRenderContext.myCubeMeshID = meshID;
+    
+    ourRenderContext.myQuadMeshID = OpenGL_CreateQuadMesh();
 }
 
 void QueueCube(const Vector3f& aPosition, const Vector3f& aSize, const Vector4f& aColor)
@@ -84,9 +112,14 @@ void QueueText(const Vector2f& aPosition, const char* aString)
     }
 }
 
-void PushRendererData()
+void PushMeshData(Camera& aCamera)
 {
-    gfx_Begin3D();
+    glEnable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
+    
+    OpenGL_ActivateShader(ourRenderContext.myMeshShader);
+    OpenGL_SetShaderUniform("Projection", aCamera.myProjection);
+    OpenGL_SetShaderUniform("View", aCamera.myInvertedView);
     
     for(int i = 0; i < ourRenderContext.myCubes.myCount; ++i)
     {
@@ -94,39 +127,71 @@ void PushRendererData()
         
         const CubeData& data = ourRenderContext.myCubes[i];
         Translate(ourRenderContext.myDummyTransform, data.myPosition);
-        gfx_DrawCube(ourRenderContext.myDummyTransform, data.myColor);
+        
+        OpenGL_SetShaderUniform("World", ourRenderContext.myDummyTransform);
+        OpenGL_SetShaderUniform("ColorAndMetalnessIn", data.myColor);
+        OpenGL_DrawMesh(ourRenderContext.myCubeMeshID);
     }
-
+    
     ArrayClear(ourRenderContext.myCubes);
     
+    Vector4f color = {1.f, 1.f, 1.f, 1.f};
     for(int i = 0; i < ourRenderContext.myMeshes.myCount; ++i)
     {
         ourRenderContext.myDummyTransform = IdentityMatrix();
         
         const MeshData& data = ourRenderContext.myMeshes[i];
         Translate(ourRenderContext.myDummyTransform, data.myPosition);
-        gfx_DrawMesh(data.myMeshID, ourRenderContext.myDummyTransform);
+        
+        OpenGL_SetShaderUniform("World", ourRenderContext.myDummyTransform);
+        OpenGL_SetShaderUniform("ColorAndMetalnessIn", color);
+        OpenGL_DrawMesh(data.myMeshID);
     }
     
     ArrayClear(ourRenderContext.myMeshes);
+}
+
+void PushQuadData(Camera& aCamera)
+{
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glActiveTexture(GL_TEXTURE0);
     
     for(int i = 0; i < ourRenderContext.myQuads.myCount; ++i)
     {
+        
         const QuadData& data = ourRenderContext.myQuads[i];
         if(data.myIsText)
-            gfx_BeginText();
+        {
+            OpenGL_ActivateShader(ourRenderContext.myTextShader);
+            OpenGL_SetShaderUniform("AlbedoTexture", 0);
+        }
         else
-            gfx_Begin2D();
+        {   
+            OpenGL_ActivateShader(ourRenderContext.myQuadShader);
+            OpenGL_SetShaderUniform("AlbedoTexture", 0);
+        }
         
-        gfx_DrawQuad(
-            data.myTextureID,
-            data.myPosition.x,
-            data.myPosition.y,
-            data.mySize.x,
-            data.mySize.y,
-            data.myColor);
+        const Vector2f& screenSize = aCamera.myScreenSize;
+        
+        Vector2f normalizedPosition = data.myPosition / screenSize;
+        Vector2f normalizedSize = data.mySize / screenSize;
+        
+        glBindTexture(GL_TEXTURE_2D, data.myTextureID);
+        OpenGL_SetShaderUniform("Position", normalizedPosition);
+        OpenGL_SetShaderUniform("Size", normalizedSize);
+        OpenGL_SetShaderUniform("Color", data.myColor);
+        
+        OpenGL_DrawMesh(ourRenderContext.myQuadMeshID);
     }
     
     ArrayClear(ourRenderContext.myQuads);
+}
+
+void PushRendererData(Camera& aCamera)
+{
+    PushMeshData(aCamera);
+    PushQuadData(aCamera);
 }
 

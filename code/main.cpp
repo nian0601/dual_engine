@@ -21,7 +21,7 @@
 #include "collision.cpp"
 #include "timer.cpp"
 #include "input.cpp"
-#include "gfx_interface.h"
+#include "opengl.h"
 #include "common_utils.cpp"
 #include "array.cpp"
 #include "heap.cpp"
@@ -80,14 +80,13 @@ int main()
         return -1;
     }
    
-    HWND windowHandle = glfwGetWin32Window(window);
-    gfx_Init(windowHandle, windowWidth, windowHeight);
-    gfx_Viewport(0, 0, windowWidth, windowHeight);
-    gfx_ClearColor(0.5f, 0.2f, 0.1f);
+    OpenGL_Init();
+    OpenGL_Viewport(0, 0, windowWidth, windowHeight);
+    OpenGL_ClearColor(0.5f, 0.2f, 0.1f);
     
     const float pi = 3.14159265f;
     
-    gfx_camera myCamera;
+    Camera myCamera;
     myCamera.myWindowSize.x = windowWidth;
     myCamera.myWindowSize.y = windowHeight;
     myCamera.myScreenSize.x = windowWidth;
@@ -97,8 +96,6 @@ int main()
     myCamera.myView = IdentityMatrix();
     myCamera.myInvertedView = IdentityMatrix();
     
-    gfx_SetCamera(&myCamera);
-    
     DE_Timer frameTimer = GetTimer();
 
     SetupAssetStorage();
@@ -106,6 +103,8 @@ int main()
     CreateWorld();
     
     ourGameState.myPlayerPosition = {20.f, 40.f, 20.f};
+    
+    //AssetInfo texture0 = GetBitmap("container.jpg");
     
     while(!glfwWindowShouldClose(window))
     {
@@ -132,30 +131,29 @@ int main()
         
         UpdateCamera(deltaTime, myCamera);        
 
-        
-        gfx_Clear();
-        
-        gfx_Begin3D();
         UpdateWorld();
         
-        if(!ourGameState.myUseDebugCamera)
+        if(ourGameState.myUseDebugCamera)
+            QueueCube(ourGameState.myPlayerPosition, {1.f, 0.f, 1.f, 1.f});
+        else
             UpdatePlayer(deltaTime, myCamera);
         
         
-        RenderWorld();
+        /*
+        QueueQuad(texture0.myTextureID, {200.f, 200.f}, texture0.mySize);	
+        QueueText({100.f, 300.f}, "TestSomeMore");	
+        */
         
-        if(ourGameState.myUseDebugCamera)
-            QueueCube(ourGameState.myPlayerPosition, {1.f, 1.f, 1.f, 1.f});
+        OpenGL_Clear();
+
+        PushRendererData(myCamera);
         
-        PushRendererData();
-        
-        gfx_FinishFrame();    
+        OpenGL_FinishFrame();    
         
         glfwSwapBuffers(window);
     }
     
     FreeAssets();
-    gfx_Shutdown();
 
     glfwTerminate();
     return 0;
