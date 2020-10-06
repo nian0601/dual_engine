@@ -1,6 +1,5 @@
 Rendering
 
-- Only generate the out-most faces of each chunk instead of having a full cube there
 - Render Water-blocks separately with alpha enabled
 - Deferred rendering
 - SSAO
