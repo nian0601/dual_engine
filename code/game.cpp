@@ -105,28 +105,46 @@ void UpdatePlayer(float aDeltaTime, Camera& aCamera)
     
     DE_Ray movementRay;
     movementRay.myStart = ourGameState.myPlayerPosition;
+    movementRay.myThickness = 0.1f;
     
     GrowingArray<ChunkRaycastHit> hits;
+    BlockRaycastHit closestBlockHit;
     ArrayAlloc(hits, 8);
     
     movementRay.myEnd = movementRay.myStart;
-    movementRay.myEnd.y += ourGameState.myPlayerVelocity.y * 2;
+    movementRay.myEnd.y += ourGameState.myPlayerVelocity.y;
     if(DoRaycast(movementRay, true, hits))
+    {
+        closestBlockHit = GetClosestBlockHit(hits);
+        
+        ourGameState.myPlayerPosition.y = closestBlockHit.myHitPosition.y - ourGameState.myPlayerVelocity.y;
         ourGameState.myPlayerVelocity.y = 0.f;
+    }
+     
     
     movementRay.myEnd = movementRay.myStart;
-    movementRay.myEnd.x += ourGameState.myPlayerVelocity.x;
+    movementRay.myEnd.x += ourGameState.myPlayerVelocity.x * 2.f;
     
     ArrayClear(hits);
     if(DoRaycast(movementRay, true, hits))
-        ourGameState.myPlayerVelocity.x = 0.f;
+    {
+        closestBlockHit = GetClosestBlockHit(hits);
+        
+        ourGameState.myPlayerPosition.x = closestBlockHit.myHitPosition.x - ourGameState.myPlayerVelocity.x;
+        ourGameState.myPlayerVelocity.x = 0.f;   
+    }
     
     movementRay.myEnd = movementRay.myStart;
-    movementRay.myEnd.z += ourGameState.myPlayerVelocity.z;
+    movementRay.myEnd.z += ourGameState.myPlayerVelocity.z * 2.f;
     
     ArrayClear(hits);
     if(DoRaycast(movementRay, true, hits))
+    {
+        closestBlockHit = GetClosestBlockHit(hits);
+        
+        ourGameState.myPlayerPosition.z = closestBlockHit.myHitPosition.z - ourGameState.myPlayerVelocity.z;
         ourGameState.myPlayerVelocity.z = 0.f;
+    }
     
     ourGameState.myPlayerPosition += ourGameState.myPlayerVelocity;
 }

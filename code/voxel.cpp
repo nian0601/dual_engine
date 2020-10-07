@@ -394,6 +394,25 @@ bool DoRaycast(const DE_Ray& aMouseRay, bool aIgnoreInvalidBlocks, GrowingArray<
     return outHits.myCount > 0;
 }
 
+BlockRaycastHit GetClosestBlockHit(const GrowingArray<ChunkRaycastHit>& someChunkHits)
+{
+    float bestDistance = FLT_MAX;
+    int bestHit = -1;
+    
+    for(int i = 0; i < someChunkHits.myCount; ++i)
+    {
+        const ChunkRaycastHit& chunkHit = someChunkHits[i];
+        if(chunkHit.myClosestHit.myRaycastDistance < bestDistance)
+        {
+            bestDistance = chunkHit.myClosestHit.myRaycastDistance;
+            bestHit = i;
+        }
+    }
+    
+    assert(bestHit != -1);
+    return someChunkHits[bestHit].myClosestHit;
+}
+
 void ModifyBlockUnderMouse(const DE_Ray& aMouseRay, int aNewBlockType)
 {
     GrowingArray<ChunkRaycastHit> raycastHits;

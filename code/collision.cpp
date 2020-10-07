@@ -11,7 +11,7 @@ bool AABBvsAABB(const DE_AABB& aFirst, const DE_AABB& aSecond)
 }
 
 //Returns the squared distance to the collision point, -1 if no collision
-float LineVSAABB(const DE_AABB& anAABB, const DE_Ray& aLine, Vector3f* aOutIntersectionPoint)
+float LineVSAABB(DE_AABB anAABB, const DE_Ray& aLine, Vector3f* aOutIntersectionPoint)
 {
 	Vector3f rayOrg = aLine.myStart;
 	Vector3f rayDelta = aLine.myEnd - aLine.myStart;
@@ -21,6 +21,9 @@ float LineVSAABB(const DE_AABB& anAABB, const DE_Ray& aLine, Vector3f* aOutInter
 	float xt;
 	float xn;
 
+    anAABB.myMinPos -= aLine.myThickness * 0.5f;
+    anAABB.myMaxPos += aLine.myThickness * 0.5f;
+    
 	if (rayOrg.x < anAABB.myMinPos.x)
 	{
 		xt = anAABB.myMinPos.x - rayOrg.x;
@@ -107,24 +110,27 @@ float LineVSAABB(const DE_AABB& anAABB, const DE_Ray& aLine, Vector3f* aOutInter
 		zt = -1.f;
 	}
     
+    Vector3f hitNormal;
 	if (inside == true)
 	{
 		if(aOutIntersectionPoint)
 			*aOutIntersectionPoint = aLine.myStart;
         
+        hitNormal = {-rayDelta.x,-rayDelta.y, -rayDelta.z};
+        
 		return 0.f;
 	}
-
+    
 	int which = 0;
-
+    
 	float t = xt;
-
+    
 	if (yt > t)
 	{
 		which = 1;
 		t = yt;
 	}
-
+    
 	if (zt > t)
 	{
 		which = 2;
@@ -133,48 +139,62 @@ float LineVSAABB(const DE_AABB& anAABB, const DE_Ray& aLine, Vector3f* aOutInter
     
 	switch (which)
 	{
-	case 0:
-	{
-		float y = rayOrg.y + rayDelta.y * t;
-		if (y < anAABB.myMinPos.y || y > anAABB.myMaxPos.y)
-		{
-			return -1.f;
-		}
-		float z = rayOrg.z + rayDelta.z * t;
-		if (z < anAABB.myMinPos.z || z > anAABB.myMaxPos.z)
-		{
-			return -1.f;
-		}
-		break;
-	}
-	case 1:
-	{
-		float x = rayOrg.x + rayDelta.x * t;
-		if (x < anAABB.myMinPos.x || x > anAABB.myMaxPos.x)
-		{
-			return -1.f;
-		}
-		float z = rayOrg.z + rayDelta.z * t;
-		if (z < anAABB.myMinPos.z || z > anAABB.myMaxPos.z)
-		{
-			return -1.f;
-		}
-		break;
-	}
-	case 2:
-	{
-		float x = rayOrg.x + rayDelta.x * t;
-		if (x < anAABB.myMinPos.x || x > anAABB.myMaxPos.x)
-		{
-			return -1.f;
-		}
-		float y = rayOrg.y + rayDelta.y * t;
-		if (y < anAABB.myMinPos.y || y > anAABB.myMaxPos.y)
-		{
-			return -1.f;
-		}
-		break;
-	}
+        case 0: //intersecting the yz plane
+        {
+            float y = rayOrg.y + rayDelta.y * t;
+            if (y < anAABB.myMinPos.y || y > anAABB.myMaxPos.y)
+            {
+                return -1.f;
+            }
+            float z = rayOrg.z + rayDelta.z * t;
+            if (z < anAABB.myMinPos.z || z > anAABB.myMaxPos.z)
+            {
+                return -1.f;
+            }
+            
+            hitNormal.x = xn;
+            hitNormal.y = 0.f;
+            hitNormal.z = 0.f;
+            break;
+        }
+        case 1: //intersecting the xz plane
+        {
+            float x = rayOrg.x + rayDelta.x * t;
+            if (x < anAABB.myMinPos.x || x > anAABB.myMaxPos.x)
+            {
+                return -1.f;
+            }
+            float z = rayOrg.z + rayDelta.z * t;
+            if (z < anAABB.myMinPos.z || z > anAABB.myMaxPos.z)
+            {
+                return -1.f;
+            }
+            
+            
+            hitNormal.x = 0.f;
+            hitNormal.y = yn;
+            hitNormal.z = 0.f;
+            break;
+        }
+        case 2: //intersecting the xy plane
+        {
+            float x = rayOrg.x + rayDelta.x * t;
+            if (x < anAABB.myMinPos.x || x > anAABB.myMaxPos.x)
+            {
+                return -1.f;
+            }
+            float y = rayOrg.y + rayDelta.y * t;
+            if (y < anAABB.myMinPos.y || y > anAABB.myMaxPos.y)
+            {
+                return -1.f;
+            }
+            
+            
+            hitNormal.x = 0.f;
+            hitNormal.y = 0.f;
+            hitNormal.z = zn;
+            break;
+        }
 	}
 
 	Vector3f intersectPoint = aLine.myStart + rayDelta * t;

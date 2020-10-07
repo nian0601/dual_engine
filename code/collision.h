@@ -2,6 +2,7 @@ struct DE_Ray
 {
     Vector3f myStart;
     Vector3f myEnd;
+    float myThickness = 0.f;
 };
 
 struct DE_AABB
