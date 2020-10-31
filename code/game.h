@@ -1,11 +1,23 @@
 #include "voxel.h"
 
+struct Entity
+{
+    Vector3f myPosition;
+    Vector3f myVelocity;
+};
+
+struct CameraEntity
+{
+    Vector3f myParentOffset;
+    Entity* myParentEntity;
+};
+
 struct GameState
 {
     World myWorld;
     
-    Vector3f myPlayerPosition;
-    Vector3f myPlayerVelocity;
+    Entity myPlayer;
+    CameraEntity myCameraEntity;
     
     bool myUseDebugCamera = false;
 };

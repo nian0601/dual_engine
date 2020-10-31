@@ -8,8 +8,9 @@ Rendering
 
 Gameplay
 
-- Snap playerposition to terrain when the movement-raycast hits something
 - Add option to place blocks
+- StateMachine-based movement
+- Projectile(s) that create and/or destroy blocks
 
 Engine
 

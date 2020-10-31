@@ -29,9 +29,6 @@
 #include "renderer.cpp"
 #include "FastNoise.cpp"
 
-#include "entity.h"
-#include "entity.cpp"
-
 #include "game.h"
 #include "voxel.cpp"
 #include "game.cpp"
@@ -102,7 +99,9 @@ int main()
     SetupRenderer();
     CreateWorld();
     
-    ourGameState.myPlayerPosition = {20.f, 40.f, 20.f};
+    ourGameState.myPlayer.myPosition = {20.f, 40.f, 20.f};
+    ourGameState.myCameraEntity.myParentEntity = &ourGameState.myPlayer;
+    ourGameState.myCameraEntity.myParentOffset.y = 2.f;
     
     //AssetInfo texture0 = GetBitmap("container.jpg");
     
@@ -124,7 +123,7 @@ int main()
             ModifyBlocksInSphere({40.f, 24.f, 50.f}, 20.f, Grass);
         
         if(KeyDownThisFrame(DEK_Z))
-            ourGameState.myUseDebugCamera = !ourGameState.myUseDebugCamera;
+            ToggleDebugCamera(myCamera);
         
         UpdateTimer(frameTimer);
         float deltaTime = GetDeltaTime(frameTimer);
@@ -134,7 +133,7 @@ int main()
         UpdateWorld();
         
         if(ourGameState.myUseDebugCamera)
-            QueueCube(ourGameState.myPlayerPosition, {1.f, 0.f, 1.f, 1.f});
+            QueueCube(ourGameState.myPlayer.myPosition, {1.f, 0.f, 1.f, 1.f});
         else
             UpdatePlayer(deltaTime, myCamera);
         
