@@ -21,14 +21,22 @@ static BlockInfo ourBlockInfos[BlockTypeCount];
 static const int ChunkSize = 32;
 static const Vector3f ChunkMidOffset = {ChunkSize * 0.5f, ChunkSize * 0.5f, ChunkSize * 0.5f};
 static const Vector3f ChunkExtents = {ChunkSize, ChunkSize, ChunkSize};
+
 struct Chunk
 {
+    enum ChunkState
+    {
+        UNINITIALIZED,
+        FROZEN,
+        ACTIVE,
+    };
+    
     GrowingArray<int> myBlocks;
     Vector3f myWorldPosition;
-    int myChunkX;
-    int myChunkY;
-    int myChunkZ;
+    Vector3i myChunkPosition;
+    DE_AABB myAABB;
     int myMeshID = -1;
+    int myState = UNINITIALIZED;
 };
 
 struct BlockRaycastHit
@@ -56,22 +64,23 @@ struct ChunkSectionAABB
     int mySize;
 };
 
-static const int WorldSize = 5;
+// We'll load+render this many extra chunks around the player
+// i.e 1 = a 3x3x3 cube around the player will be loaded (1 additional chunk in all directions)
+static const int ChunkStreamingBorderSize = 3;
+static const int WorldSize = 15;
 static const int WorldHeight = 3;
 static const int MaxChunksToCreatePerUpdate = 4;
 struct World
 {
     GrowingArray<Chunk*> myChunks;
 
-    // Once I move the meshbuilding to a separate thread (if I end up doing that)
-    // then I need to reorganize these lists. For now each Chunk i splaced both the 'BuildMesh' and 'Render'-lists
-    // once it has been Initialized. But to make sure that we never have cases 
-    // where a chunk disappears for a frame we never remove them from the 'Render' list.
-    // To support threating we'll need some way to keep the old mesh alive 
-    // until the new mesh has been built to be able to support this.
-    GrowingArray<Chunk*> myChunksToInit;
+    GrowingArray<Chunk*> myUninitializedChunks;
+    GrowingArray<Chunk*> myActiveChunks;
+    GrowingArray<Chunk*> myFrozenChunks;
+    
     GrowingArray<Chunk*> myChunksToBuildMesh;
-    GrowingArray<Chunk*> myChunksToRender;
     
     FastNoise myNoise;
+    
+    Vector3i myStreamingCenterChunk;
 };

@@ -31,6 +31,36 @@ Vector3f GetBlockCenterWorldPosition(Chunk* aChunk, int x, int y, int z)
     return position;
 }
 
+Chunk* FindChunk(Vector3i position)
+{
+    for(Chunk* chunk : ourGameState.myWorld.myChunks)
+    {
+        if(chunk->myChunkPosition == position)
+            return chunk;
+    }
+    
+    return nullptr;
+}
+
+Chunk* CreateEmptyChunk(int x, int y, int z)
+{
+    Chunk* chunk = new Chunk();
+    chunk->myChunkPosition.x = x;
+    chunk->myChunkPosition.y = y;
+    chunk->myChunkPosition.z = z;
+    chunk->myWorldPosition.x = x * ChunkSize;
+    chunk->myWorldPosition.y = y * ChunkSize;
+    chunk->myWorldPosition.z = z * ChunkSize;
+    chunk->myAABB = AABBFromExtents(chunk->myWorldPosition, ChunkExtents);
+    chunk->myMeshID = -1;
+    chunk->myState = Chunk::ChunkState::UNINITIALIZED;
+    
+    ArrayAdd(ourGameState.myWorld.myChunks, chunk);
+    ArrayAdd(ourGameState.myWorld.myUninitializedChunks, chunk);
+    
+    return chunk;
+}
+
 void FillChunk(Chunk* aChunk)
 {
     ArrayAlloc(aChunk->myBlocks, ChunkSize * ChunkSize * ChunkSize);
@@ -44,15 +74,15 @@ void FillChunk(Chunk* aChunk)
     int waterLevel = 5;
     for(int x = 0; x < ChunkSize; ++x)
     {
-        int voxelX = aChunk->myChunkX * ChunkSize + x;
+        int voxelX = aChunk->myChunkPosition.x * ChunkSize + x;
         
         for(int y = 0; y < ChunkSize; ++y)
         {
-            int voxelY = aChunk->myChunkY * ChunkSize + y;
+            int voxelY = aChunk->myChunkPosition.y * ChunkSize + y;
             
             for(int z = 0; z < ChunkSize; ++z)
             {
-                int voxelZ = aChunk->myChunkZ * ChunkSize + z;
+                int voxelZ = aChunk->myChunkPosition.z * ChunkSize + z;
                 
                 float value = ourGameState.myWorld.myNoise.GetSimplex(voxelX, voxelZ);
                 value += 1.f;
@@ -138,61 +168,17 @@ void BuildChunkMesh(Chunk* aChunk)
 
 void CreateWorld()
 {
-    ArrayAlloc(ourGameState.myWorld.myChunks, WorldSize * WorldHeight  * WorldSize);
-    ArrayAlloc(ourGameState.myWorld.myChunksToInit, WorldSize);
-    ArrayAlloc(ourGameState.myWorld.myChunksToBuildMesh, WorldSize);
-    ArrayAlloc(ourGameState.myWorld.myChunksToRender, WorldSize);
+    World& world = ourGameState.myWorld;
+    ArrayAlloc(world.myChunks, WorldSize * WorldHeight  * WorldSize);
+    ArrayAlloc(world.myUninitializedChunks, WorldSize);
+    ArrayAlloc(world.myActiveChunks, WorldSize);
+    ArrayAlloc(world.myFrozenChunks, WorldSize);
     
-#if 1
-    for(int x = 0; x < WorldSize; ++x)
-    {
-        for(int y = 0; y < WorldHeight; ++y)
-        {
-            for(int z = 0; z < WorldSize; z++)
-            {
-                Chunk* chunk = new Chunk();
-                chunk->myChunkX = x;
-                chunk->myChunkY = y;
-                chunk->myChunkZ = z;
-                chunk->myWorldPosition.x = x * ChunkSize;
-                chunk->myWorldPosition.y = y * ChunkSize;
-                chunk->myWorldPosition.z = z * ChunkSize;
-                chunk->myMeshID = -1;
-                
-                ArrayAdd(ourGameState.myWorld.myChunks, chunk);
-                ArrayAdd(ourGameState.myWorld.myChunksToInit, chunk);
-            }
-        }
-    }
-#else
-    int startX = 0;
-    int startY = 0;
-    int startZ = 0;
-    int endX = 2;
-    int endY = 1;
-    int endZ = 2;
+    ArrayAlloc(world.myChunksToBuildMesh, WorldSize);
     
-    for(int x = startX; x < endX; ++x)
-    {
-        for(int y = startY; y < endY; ++y)
-        {
-            for(int z = startZ; z < endZ; z++)
-            {
-                Chunk* chunk = new Chunk();
-                chunk->myChunkX = x;
-                chunk->myChunkY = y;
-                chunk->myChunkZ = z;
-                chunk->myWorldPosition.x = x * ChunkSize + (x * 5.f);
-                chunk->myWorldPosition.y = y * ChunkSize;
-                chunk->myWorldPosition.z = z * ChunkSize + (z * 5.f);
-                chunk->myMeshID = -1;
-                
-                ArrayAdd(ourGameState.myWorld.myChunks, chunk);
-                ArrayAdd(ourGameState.myWorld.myChunksToInit, chunk);
-            }
-        }
-    }
-#endif
+    world.myStreamingCenterChunk.x = -1;
+    world.myStreamingCenterChunk.y = -1;
+    world.myStreamingCenterChunk.z = -1;
 }
 
 void RenderChunk(Chunk* aChunk)
@@ -203,16 +189,89 @@ void RenderChunk(Chunk* aChunk)
 
 void RenderWorld()
 {
-    GrowingArray<Chunk*>& chunks = ourGameState.myWorld.myChunksToRender;
-    for(int i = 0; i < chunks.myCount; ++i)
-        RenderChunk(chunks[i]);
+    GrowingArray<Chunk*>& chunks = ourGameState.myWorld.myActiveChunks;
+    for(Chunk* chunk : chunks)
+        RenderChunk(chunk);
+}
+
+void UpdateStreamingArea(const Vector3f aStreamingPosition)
+{
+    Vector3i centerChunk;
+    
+    centerChunk.x = int(aStreamingPosition.x / ChunkSize);
+    centerChunk.y = 0;
+    centerChunk.z = int(aStreamingPosition.z / ChunkSize);
+    
+    if(centerChunk == ourGameState.myWorld.myStreamingCenterChunk)
+        return;
+    
+    ourGameState.myWorld.myStreamingCenterChunk = centerChunk;
+
+    Vector3i minPos = centerChunk - ChunkStreamingBorderSize;
+    minPos.x = Max(minPos.x, 0);
+    minPos.y = 0;
+    minPos.z = Max(minPos.z, 0);
+    Vector3i maxPos = centerChunk + ChunkStreamingBorderSize;
+    maxPos.y = WorldHeight;
+    DE_AABBi streamingArea = AABBiFromPoints(minPos, maxPos);
+    
+    // Go through all existing chunks.
+    // Any ACTIVE chunks that now are OUTSIDE the streaming area needs to become FROZEN
+    // Any FROZEN chunks that now are INSIDE the streaming area needs to become ACTIVE
+    //
+    // We do not create any new chunks here, we'll handle that separately
+    GrowingArray<Chunk*>& chunks = ourGameState.myWorld.myChunks;
+    for(Chunk* chunk : chunks)
+    {
+        bool isInsideStreamingArea = AABBvsPoint(streamingArea, chunk->myChunkPosition);
+        
+        if(isInsideStreamingArea && chunk->myState == Chunk::ChunkState::FROZEN)
+        {
+            chunk->myState = Chunk::ChunkState::ACTIVE;
+            
+            ArrayRemoveCyclic(ourGameState.myWorld.myFrozenChunks, chunk);
+            ArrayAdd(ourGameState.myWorld.myActiveChunks, chunk);
+            
+            // When we're actually deleting the mesh when freezing chunks when we'll
+            // need to also rebuild the mesh when unfreezing them
+            //ArrayAdd(ourGameState.myWorld.myChunksToBuildMesh, chunk);
+        }
+        else if(!isInsideStreamingArea && chunk->myState == Chunk::ChunkState::ACTIVE)
+        {
+            chunk->myState = Chunk::ChunkState::FROZEN;
+            
+            ArrayRemoveCyclic(ourGameState.myWorld.myActiveChunks, chunk);
+            ArrayAdd(ourGameState.myWorld.myFrozenChunks, chunk);
+            
+            // We should be fully destroying the mesh here as well to avoid keeping
+            // all that meshdata in memory. Should update the OpenGL-interface to support that.
+            // Will need a smarter system for MeshID-handling though.
+            //
+            //ArrayAdd(ourGameState.myWorld.myChunksToDestroyMesh, chunk);
+        }
+    }
+    
+    // Now we go through all the chunks inside the streamingarea and
+    // create new chunks where we need to
+    for(int x = minPos.x; x <= maxPos.x; ++x)
+    {
+        for(int y = minPos.y; y <= maxPos.y; ++y)
+        {
+            for(int z = minPos.z; z <= maxPos.z; ++z)
+            {
+                Chunk* chunk = FindChunk({x, y, z});
+                if(!chunk)
+                    CreateEmptyChunk(x, y, z);
+            }
+        }
+    }
 }
 
 void InitChunks()
 {
-    GrowingArray<Chunk*>& chunks = ourGameState.myWorld.myChunksToInit;
-    int chunksRemoved = 0;
-    while(chunks.myCount > 0 && chunksRemoved < MaxChunksToCreatePerUpdate)
+    GrowingArray<Chunk*>& chunks = ourGameState.myWorld.myUninitializedChunks;
+    int chunksProcessed = 0;
+    while(chunks.myCount > 0 && chunksProcessed < MaxChunksToCreatePerUpdate)
     {
         Chunk* chunk = chunks[chunks.myCount - 1];
         ArrayRemoveCyclic(chunks, chunks.myCount - 1);
@@ -220,29 +279,30 @@ void InitChunks()
         FillChunk(chunk);
         
         ArrayAdd(ourGameState.myWorld.myChunksToBuildMesh, chunk);
-        ArrayAdd(ourGameState.myWorld.myChunksToRender, chunk);
-        
-        ++chunksRemoved;
+        ArrayAdd(ourGameState.myWorld.myActiveChunks, chunk);
+     
+        chunk->myState = Chunk::ChunkState::ACTIVE;
+        ++chunksProcessed;
     }
 }
 
 void BuildChunkMeshes()
 {
     GrowingArray<Chunk*>& chunks = ourGameState.myWorld.myChunksToBuildMesh;
-    int chunksRemoved = 0;
-    while(chunks.myCount > 0 && chunksRemoved < MaxChunksToCreatePerUpdate)
+    int chunksProcessed = 0;
+    while(chunks.myCount > 0 && chunksProcessed < MaxChunksToCreatePerUpdate)
     {
         Chunk* chunk = chunks[chunks.myCount - 1];
         ArrayRemoveCyclic(chunks, chunks.myCount - 1);
         
         BuildChunkMesh(chunk);
         
-        ++chunksRemoved;
+        ++chunksProcessed;
     }
 }
 
 void UpdateWorld()
-{
+{   
     InitChunks();
     BuildChunkMeshes();
     
@@ -274,7 +334,6 @@ void ModifyBlocksInSphere(Chunk* aChunk, int aNewBlockType, const Vector3f& aPos
                         aChunk->myBlocks[blockIndex] = aNewBlockType;
                         wasModified = true;
                     }
-                    
                 }
             }
         }
@@ -288,10 +347,8 @@ void ModifyBlocksInSphere(Chunk* aChunk, int aNewBlockType, const Vector3f& aPos
 
 void ModifyBlocksInSphere(const Vector3f& aPosition, float aRadius, int aNewBlockType)
 {
-    for(int i = 0; i < ourGameState.myWorld.myChunksToRender.myCount; ++i)
+    for(Chunk* chunk : ourGameState.myWorld.myActiveChunks)
     {
-        Chunk* chunk = ourGameState.myWorld.myChunksToRender[i];
-        
         Vector3f chunkCenter = chunk->myWorldPosition + ChunkMidOffset;
         float distance = Length2(aPosition - chunkCenter);
         
@@ -373,9 +430,8 @@ bool DoRaycast(const DE_Ray& aMouseRay, bool aIgnoreInvalidBlocks, GrowingArray<
     section.myZ = 0;
     section.mySize = ChunkSize;
     
-    for(int i = 0; i < ourGameState.myWorld.myChunksToRender.myCount; ++i)
+    for(Chunk* chunk : ourGameState.myWorld.myActiveChunks)
     {
-        Chunk* chunk = ourGameState.myWorld.myChunksToRender[i];
         section.myChunk = chunk;
         
         ChunkRaycastHit chunkHit = {};

@@ -130,6 +130,7 @@ int main()
         
         UpdateCamera(deltaTime, myCamera);        
 
+        UpdateStreamingArea(ourGameState.myPlayer.myPosition);
         UpdateWorld();
         
         if(ourGameState.myUseDebugCamera)
@@ -137,10 +138,9 @@ int main()
         else
             UpdatePlayer(deltaTime, myCamera);
         
-        
         /*
         QueueQuad(texture0.myTextureID, {200.f, 200.f}, texture0.mySize);	
-        QueueText({100.f, 300.f}, "TestSomeMore");	
+        QueueText({100.f, 300.f}, "123Test321");
         */
         
         OpenGL_Clear();
