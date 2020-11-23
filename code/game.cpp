@@ -72,6 +72,11 @@ void UpdateCamera(float aDeltaTime, Camera& aCamera)
         ourInput.myMousePosition, 0.f, aCamera.myInvertedView, aCamera.myProjection, aCamera.myWindowSize);
     ourInput.myMouseRay.myEnd = Unproject(
         ourInput.myMousePosition, 1.f, aCamera.myInvertedView, aCamera.myProjection, aCamera.myWindowSize);
+    
+    ourInput.myMiddleOfScreenRay.myStart = Unproject(
+        aCamera.myWindowSize * 0.5f, 0.f, aCamera.myInvertedView, aCamera.myProjection, aCamera.myWindowSize);
+    ourInput.myMiddleOfScreenRay.myEnd = Unproject(
+        aCamera.myWindowSize * 0.5f, 1.f, aCamera.myInvertedView, aCamera.myProjection, aCamera.myWindowSize);
 }
 
 void UpdatePlayerVelocity(float aDeltaTime, Camera& aCamera)
@@ -101,23 +106,20 @@ void UpdatePlayerVelocity(float aDeltaTime, Camera& aCamera)
         player.myVelocity -= forward;    
     
     if(KeyDownThisFrame(DEK_SPACE))
+    {
         player.myVelocity.y += 20.f * aDeltaTime;
+        player.myVelocity.y = Min(player.myVelocity.y, 0.1f);
+    }
     
     player.myVelocity.y -= 0.25f * aDeltaTime;
     
     player.myVelocity.x *= aDeltaTime;
     player.myVelocity.z *= aDeltaTime;
-    
+ 
+
     if(MouseDownThisFrame(DEK_LEFTMOUSE))
     {
-        DE_Ray clickRay;
-        clickRay.myStart = player.myPosition;
-        clickRay.myStart.y += 0.5f;
-        
-        clickRay.myEnd = clickRay.myStart;
-        clickRay.myEnd += forward * 10.f;
-        
-        ModifyBlockUnderMouse(clickRay, InvalidBlockType);
+        ModifyBlockUnderMouse(ourInput.myMiddleOfScreenRay, InvalidBlockType);
     }
 }
 

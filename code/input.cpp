@@ -70,6 +70,7 @@ struct DE_Input
     Vector2f myMousePosition;
     Vector2f myMouseDelta;
     DE_Ray myMouseRay;
+    DE_Ray myMiddleOfScreenRay;
 };
 
 static DE_Input ourInput;
