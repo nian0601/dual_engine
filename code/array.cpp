@@ -7,6 +7,13 @@ struct GrowingArray
     int myCount = 0;
     int myMaxCount = 0;
     T* myData = nullptr;
+    
+    typedef T* iterator;
+	typedef const T* const_iterator;
+	iterator begin() { return &myData[0]; }
+	const_iterator begin() const { return &myData[0]; }
+	iterator end() { return &myData[myCount]; }
+	const_iterator end() const { return &myData[myCount]; }
 };
 
 template<typename T>
