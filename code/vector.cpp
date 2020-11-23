@@ -1,5 +1,6 @@
-
-// Vector4
+////////////////////////////////////////////////////////////////////////////////////
+// Vector4f
+////////////////////////////////////////////////////////////////////////////////////
 
 struct Vector4f
 {
@@ -175,7 +176,9 @@ void Normalize(Vector4f& aVector)
     aVector /= length;
 }
 
-// Vector3
+////////////////////////////////////////////////////////////////////////////////////
+// Vector3f
+////////////////////////////////////////////////////////////////////////////////////
 
 struct Vector3f
 {
@@ -351,7 +354,155 @@ void Normalize(Vector3f& aVector)
     
     aVector /= length;
 }
+
+////////////////////////////////////////////////////////////////////////////////////
+// Vector3i
+////////////////////////////////////////////////////////////////////////////////////
+
+struct Vector3i
+{
+    int x;
+    int y;
+    int z;
+};
+
+bool operator==(const Vector3i& aA, const Vector3i& aB)
+{
+    return aA.x == aB.x && aA.y == aB.y && aA.z == aB.z;
+}
+
+bool operator!=(const Vector3i& aA, const Vector3i& aB)
+{
+    return !(aA == aB);
+}
+
+// Addition
+Vector3i operator+=(Vector3i& aA, int aScalar)
+{
+    aA.x += aScalar;
+    aA.y += aScalar;
+    aA.z += aScalar;
+    return aA;
+}
+
+Vector3i operator+(const Vector3i& aA, int aScalar)
+{
+    Vector3i result = aA;
+    result += aScalar;
+    return result;
+}
+
+Vector3i operator+=(Vector3i& aA, const Vector3i& aB)
+{
+    aA.x += aB.x;
+    aA.y += aB.y;
+    aA.z += aB.z;
+    return aA;
+}
+
+Vector3i operator+(const Vector3i& aA, const Vector3i& aB)
+{
+    Vector3i result = aA;
+    result += aB;
+    return result;
+}
+
+// Subtraction
+Vector3i operator-=(Vector3i& aA, int aScalar)
+{
+    aA.x -= aScalar;
+    aA.y -= aScalar;
+    aA.z -= aScalar;
+    return aA;
+}
+
+Vector3i operator-(const Vector3i& aA, int aScalar)
+{
+    Vector3i result = aA;
+    result -= aScalar;
+    return result;
+}
+
+Vector3i operator-=(Vector3i& aA, const Vector3i& aB)
+{
+    aA.x -= aB.x;
+    aA.y -= aB.y;
+    aA.z -= aB.z;
+    return aA;
+}
+
+Vector3i operator-(const Vector3i& aA, const Vector3i& aB)
+{
+    Vector3i result = aA;
+    result -= aB;
+    return result;
+}
+
+// Multiplication
+Vector3i operator*=(Vector3i& aA, int aScalar)
+{
+    aA.x *= aScalar;
+    aA.y *= aScalar;
+    aA.z *= aScalar;
+    return aA;
+}
+
+Vector3i operator*(const Vector3i& aA, int aScalar)
+{
+    Vector3i result = aA;
+    result *= aScalar;
+    return result;
+}
+
+Vector3i operator*=(Vector3i& aA, const Vector3i& aB)
+{
+    aA.x *= aB.x;
+    aA.y *= aB.y;
+    aA.z *= aB.z;
+    return aA;
+}
+
+Vector3i operator*(const Vector3i& aA, const Vector3i& aB)
+{
+    Vector3i result = aA;
+    result *= aB;
+    return result;
+}
+
+// Division
+Vector3i operator/=(Vector3i& aA, int aScalar)
+{
+    aA.x /= aScalar;
+    aA.y /= aScalar;
+    aA.z /= aScalar;
+    return aA;
+}
+
+Vector3i operator/(const Vector3i& aA, int aScalar)
+{
+    Vector3i result = aA;
+    result /= aScalar;
+    return result;
+}
+
+Vector3i operator/=(Vector3i& aA, const Vector3i& aB)
+{
+    aA.x /= aB.x;
+    aA.y /= aB.y;
+    aA.z /= aB.z;
+    return aA;
+}
+
+Vector3i operator/(const Vector3i& aA, const Vector3i& aB)
+{
+    Vector3i result = aA;
+    result /= aB;
+    return result;
+}
+
+////////////////////////////////////////////////////////////////////////////////////
 // Vector2
+////////////////////////////////////////////////////////////////////////////////////
 
 struct Vector2f
 {

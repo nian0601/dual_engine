@@ -10,6 +10,31 @@ bool AABBvsAABB(const DE_AABB& aFirst, const DE_AABB& aSecond)
     return true;
 }
 
+bool AABBvsAABB(const DE_AABBi& aFirst, const DE_AABBi& aSecond)
+{
+    if(aFirst.myMaxPos.x < aSecond.myMinPos.x) return false;
+    if(aFirst.myMaxPos.y < aSecond.myMinPos.y) return false;
+    if(aFirst.myMaxPos.z < aSecond.myMinPos.z) return false;
+    if(aFirst.myMinPos.x > aSecond.myMaxPos.x) return false;
+    if(aFirst.myMinPos.y > aSecond.myMaxPos.y) return false;
+    if(aFirst.myMinPos.z > aSecond.myMaxPos.z) return false;
+    
+    return true;
+}
+
+bool AABBvsPoint(const DE_AABBi& aAABB, const Vector3i& aPoint)
+{
+    if(aPoint.x < aAABB.myMinPos.x) return false;
+    if(aPoint.y < aAABB.myMinPos.y) return false;
+    if(aPoint.z < aAABB.myMinPos.z) return false;
+    
+    if(aPoint.x > aAABB.myMaxPos.x) return false;
+    if(aPoint.y > aAABB.myMaxPos.y) return false;
+    if(aPoint.z > aAABB.myMaxPos.z) return false;
+    
+    return true;
+}
+
 //Returns the squared distance to the collision point, -1 if no collision
 float LineVSAABB(DE_AABB anAABB, const DE_Ray& aLine, Vector3f* aOutIntersectionPoint)
 {
