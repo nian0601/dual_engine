@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <shared_mutex>
 
 struct DE_File
 {
@@ -51,3 +52,62 @@ T Min(T a, T b)
 {
     return a < b ? a : b;
 }
+
+///////////////////////////////////////////////////////////
+// Threading-stuff, move to its own file?
+
+struct Mutex
+{
+    void ReadLock()
+    {
+        myMutex.lock_shared();
+    }
+    void ReadUnlock()
+    {
+        myMutex.unlock_shared();
+    }
+    
+    void ReadWriteLock()
+    {
+        myMutex.lock();
+    }
+    
+    void ReadWriteUnlock()
+    {
+        myMutex.unlock();
+    }
+    
+    std::shared_mutex myMutex;
+};
+
+struct ReadLock
+{
+    ReadLock(Mutex& aMutex)
+        : myMutex(aMutex)
+    {
+        myMutex.ReadLock();
+    }
+    
+    ~ReadLock()
+    {
+        myMutex.ReadUnlock();
+    }
+    
+    Mutex& myMutex;
+};
+
+struct ReadWriteLock
+{
+    ReadWriteLock(Mutex& aMutex)
+        : myMutex(aMutex)
+    {
+        myMutex.ReadWriteLock();
+    }
+    
+    ~ReadWriteLock()
+    {
+        myMutex.ReadWriteUnlock();
+    }
+    
+    Mutex& myMutex;
+};
