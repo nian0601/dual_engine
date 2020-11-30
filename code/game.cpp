@@ -57,6 +57,7 @@ void UpdateCamera(float aDeltaTime, Camera& aCamera)
 {
     float rotationSpeed = 3.14f * 0.1f * aDeltaTime;
     
+    Vector3f cameraPosition = CalculateCameraPosition(aDeltaTime, aCamera);
     SetTranslation(aCamera.myView, {0.f, 0.f, 0.f});
     
     Matrix xRotation = RotationMatrixAxisAngle(aCamera.myView.myRows[0].myData, rotationSpeed * ourInput.myMouseDelta.y);
@@ -65,7 +66,7 @@ void UpdateCamera(float aDeltaTime, Camera& aCamera)
     aCamera.myView = aCamera.myView * xRotation;
     aCamera.myView = aCamera.myView * yRotation;
 
-    SetTranslation(aCamera.myView, CalculateCameraPosition(aDeltaTime, aCamera));
+    SetTranslation(aCamera.myView, cameraPosition);
     
     aCamera.myInvertedView = InverseSimple(aCamera.myView);
     ourInput.myMouseRay.myStart = Unproject(
