@@ -1,6 +1,14 @@
 template <typename T>
 struct GrowingArray
 {
+    ~GrowingArray()
+    {
+        myCount = 0;
+        myMaxCount = 0;
+        free(myData);
+        myData = nullptr;
+    }
+    
     T& operator[](const int& aIndex);
 	const T& operator[](const int& aIndex) const;
     
