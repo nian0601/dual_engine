@@ -261,6 +261,15 @@ Vector4f GetTranslation(const Matrix& aMatrix)
     return result;
 }
 
+Vector3f GetTranslation3f(const Matrix& aMatrix)
+{
+    Vector3f result;
+    result.x = aMatrix.myRows[3].myData.x;
+    result.y = aMatrix.myRows[3].myData.y;
+    result.z = aMatrix.myRows[3].myData.z;
+    return result;
+}
+
 void Translate(Matrix& aMatrix, const Vector3f& aTranslation)
 {
     aMatrix.myRows[3].myData += aTranslation;
