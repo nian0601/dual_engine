@@ -103,6 +103,8 @@ int main()
     ourGameState.myCameraEntity.myParentEntity = &ourGameState.myPlayer;
     ourGameState.myCameraEntity.myParentOffset.y = 2.f;
     
+    
+    BuildInitialChunks(ourGameState.myPlayer.myPosition);
     //AssetInfo texture0 = GetBitmap("container.jpg");
     
     while(!glfwWindowShouldClose(window))
@@ -130,7 +132,11 @@ int main()
         
         UpdateCamera(deltaTime, myCamera);        
 
-        UpdateStreamingArea(ourGameState.myPlayer.myPosition);
+        if(ourGameState.myUseDebugCamera)
+            UpdateStreamingArea(GetTranslation3f(myCamera.myView));
+        else
+            UpdateStreamingArea(ourGameState.myPlayer.myPosition);
+        
         UpdateWorld();
         
         if(ourGameState.myUseDebugCamera)
@@ -151,6 +157,8 @@ int main()
         
         glfwSwapBuffers(window);
     }
+    
+    void DestroyWorld();
     
     FreeAssets();
 

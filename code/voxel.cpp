@@ -166,19 +166,33 @@ void BuildChunkMesh(Chunk* aChunk)
     OpenGL_FinishMesh(aChunk->myMeshID);
 }
 
+void ChunkWorkerUpdateFunction();
 void CreateWorld()
 {
     World& world = ourGameState.myWorld;
-    ArrayAlloc(world.myChunks, WorldSize * WorldHeight  * WorldSize);
-    ArrayAlloc(world.myUninitializedChunks, WorldSize);
-    ArrayAlloc(world.myActiveChunks, WorldSize);
-    ArrayAlloc(world.myFrozenChunks, WorldSize);
+    ArrayAlloc(world.myChunks, ChunkStreamingBorderSize * ChunkStreamingBorderSize * ChunkStreamingBorderSize);
+    ArrayAlloc(world.myUninitializedChunks, ChunkStreamingBorderSize);
+    ArrayAlloc(world.myActiveChunks, ChunkStreamingBorderSize);
+    ArrayAlloc(world.myFrozenChunks, ChunkStreamingBorderSize);
     
-    ArrayAlloc(world.myChunksToBuildMesh, WorldSize);
+    ArrayAlloc(world.myChunksToBuildMesh, ChunkStreamingBorderSize);
+    
+    ArrayAlloc(world.myChunkWorkerData.myWaitingList, ChunkStreamingBorderSize);
+    ArrayAlloc(world.myChunkWorkerData.myActiveList, ChunkStreamingBorderSize);
+    ArrayAlloc(world.myChunkWorkerData.myFinishedList, ChunkStreamingBorderSize);
     
     world.myStreamingCenterChunk.x = -1;
     world.myStreamingCenterChunk.y = -1;
     world.myStreamingCenterChunk.z = -1;
+    
+    world.myChunkWorkerData.myThread = new std::thread(ChunkWorkerUpdateFunction);
+}
+
+void DestroyWorld()
+{
+    World& world = ourGameState.myWorld;
+    world.myChunkWorkerData.myShutDownWorker = true;
+    world.myChunkWorkerData.myThread->join();
 }
 
 void RenderChunk(Chunk* aChunk)
@@ -267,6 +281,154 @@ void UpdateStreamingArea(const Vector3f aStreamingPosition)
     }
 }
 
+void ChunkWorkerFillChunk(Chunk* aChunk, FastNoise& someNoise)
+{
+    ArrayAlloc(aChunk->myBlocks, ChunkSize * ChunkSize * ChunkSize);
+    
+    int grassThickness = 1;
+    int dirtThickness = 3;
+    
+    int stoneLevel = 20;
+    int grassLevel = 13;
+    int dirtLevel = 7;
+    int waterLevel = 5;
+    for(int x = 0; x < ChunkSize; ++x)
+    {
+        int voxelX = aChunk->myChunkPosition.x * ChunkSize + x;
+        
+        for(int y = 0; y < ChunkSize; ++y)
+        {
+            int voxelY = aChunk->myChunkPosition.y * ChunkSize + y;
+            
+            for(int z = 0; z < ChunkSize; ++z)
+            {
+                int voxelZ = aChunk->myChunkPosition.z * ChunkSize + z;
+                
+                float value = someNoise.GetSimplex(voxelX, voxelZ);
+                value += 1.f;
+                value *= 0.5f;
+                
+                int terrainHeight = static_cast<int>(value * 30.f);
+                terrainHeight = max(terrainHeight, waterLevel);
+                
+                
+                int blockValue = InvalidBlockType;
+                if(voxelY <= terrainHeight)
+                {
+                    if(voxelY > stoneLevel)
+                        blockValue = Stone;
+                    else if(voxelY > grassLevel)
+                        blockValue = Grass;
+                    else if(voxelY > dirtLevel)
+                        blockValue = Dirt;
+                    else
+                        blockValue = Water;
+                }
+                ArrayAdd(aChunk->myBlocks, blockValue);
+            }
+        }
+    }
+}
+
+void ChunkWorkerUpdateFunction()
+{
+    ChunkWorkerData& workerData = ourGameState.myWorld.myChunkWorkerData;
+    while(!workerData.myShutDownWorker)
+    {
+        {
+            ReadWriteLock lock(workerData.myMutex);
+            
+            // First we move all the chunks we finished the last tick to the finished list
+            // And clear the ActiveList
+            for(Chunk* finishedChunk : workerData.myActiveList)
+                ArrayAdd(workerData.myFinishedList, finishedChunk);
+            
+            ArrayClear(workerData.myActiveList);
+            
+            // Then we move all the new Waiting chunks from the WaitingList to the ActiveList
+            // and clear the WaitingList.
+            
+            for(Chunk* waitingChunk : workerData.myWaitingList)
+                ArrayAdd(workerData.myActiveList, waitingChunk);
+            
+            ArrayClear(workerData.myWaitingList);
+            
+            // Now we dont need to keep the mutex locked anymore since none else touches the ActiveList
+            // The main-thread is "free" to mess around with the Waiting and Finished list, as long
+            // as they lock the mutex so that we dont collide when we're finished with the current AcitveList.
+        }
+        
+        // Process all the 'ActiveList' chunks
+        for(Chunk* chunk : workerData.myActiveList)
+        {
+            ChunkWorkerFillChunk(chunk, workerData.myNoise);
+        }
+    }
+}
+
+void SyncronizeChunkWorker()
+{
+    ChunkWorkerData& workerData = ourGameState.myWorld.myChunkWorkerData;
+    ReadWriteLock lock(workerData.myMutex);
+    
+    // Send chunks that needs to be built to the waitinglist
+    for(Chunk* chunk : ourGameState.myWorld.myUninitializedChunks)
+    {
+        ArrayAdd(workerData.myWaitingList, chunk);
+        chunk->myState = Chunk::ChunkState::ON_WORKER_THREAD;
+    }
+    ArrayClear(ourGameState.myWorld.myUninitializedChunks);
+    
+    // Grab finished chunks from the worker and put them into the 'ChunksToBuildMesh'-list.
+    for(Chunk* chunk : workerData.myFinishedList)
+    {
+        ArrayAdd(ourGameState.myWorld.myChunksToBuildMesh, chunk);
+        ArrayAdd(ourGameState.myWorld.myActiveChunks, chunk);
+        
+        chunk->myState = Chunk::ChunkState::ACTIVE;
+    }
+    ArrayClear(workerData.myFinishedList);
+}
+
+void BuildInitialChunks(const Vector3f& aPosition)
+{
+    Vector3i centerChunk;
+    
+    centerChunk.x = int(aPosition.x / ChunkSize);
+    centerChunk.y = 0;
+    centerChunk.z = int(aPosition.z / ChunkSize);
+    
+    Vector3i minPos = centerChunk - 3;
+    minPos.x = Max(minPos.x, 0);
+    minPos.y = 0;
+    minPos.z = Max(minPos.z, 0);
+    Vector3i maxPos = centerChunk + 3;
+    maxPos.y = WorldHeight;
+    
+    for(int x = minPos.x; x <= maxPos.x; ++x)
+    {
+        for(int y = minPos.y; y <= maxPos.y; ++y)
+        {
+            for(int z = minPos.z; z <= maxPos.z; ++z)
+            {
+                Chunk* chunk = FindChunk({x, y, z});
+                if(!chunk)
+                    CreateEmptyChunk(x, y, z);
+            }
+        }
+    }
+    
+    for(Chunk* chunk : ourGameState.myWorld.myUninitializedChunks)
+    {
+        FillChunk(chunk);
+        BuildChunkMesh(chunk);
+        
+        ArrayAdd(ourGameState.myWorld.myActiveChunks, chunk);
+        chunk->myState = Chunk::ChunkState::ACTIVE;
+    }
+    ArrayClear(ourGameState.myWorld.myUninitializedChunks);
+}
+
 void InitChunks()
 {
     GrowingArray<Chunk*>& chunks = ourGameState.myWorld.myUninitializedChunks;
@@ -303,7 +465,8 @@ void BuildChunkMeshes()
 
 void UpdateWorld()
 {   
-    InitChunks();
+    SyncronizeChunkWorker();
+    //InitChunks();
     BuildChunkMeshes();
     
     RenderWorld();

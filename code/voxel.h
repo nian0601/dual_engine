@@ -18,7 +18,7 @@ static BlockInfo ourBlockInfos[BlockTypeCount];
 
 
 // Keep this power of two to make sure that collisionchecking is nice and easy
-static const int ChunkSize = 32;
+static const int ChunkSize = 64;
 static const Vector3f ChunkMidOffset = {ChunkSize * 0.5f, ChunkSize * 0.5f, ChunkSize * 0.5f};
 static const Vector3f ChunkExtents = {ChunkSize, ChunkSize, ChunkSize};
 
@@ -27,6 +27,7 @@ struct Chunk
     enum ChunkState
     {
         UNINITIALIZED,
+        ON_WORKER_THREAD,
         FROZEN,
         ACTIVE,
     };
@@ -66,10 +67,24 @@ struct ChunkSectionAABB
 
 // We'll load+render this many extra chunks around the player
 // i.e 1 = a 3x3x3 cube around the player will be loaded (1 additional chunk in all directions)
-static const int ChunkStreamingBorderSize = 3;
-static const int WorldSize = 15;
+static const int ChunkStreamingBorderSize = 9;
 static const int WorldHeight = 3;
 static const int MaxChunksToCreatePerUpdate = 4;
+
+struct ChunkWorkerData
+{
+    Mutex myMutex;
+    GrowingArray<Chunk*> myWaitingList;
+    GrowingArray<Chunk*> myFinishedList;
+    
+    
+    
+    GrowingArray<Chunk*> myActiveList;
+    std::thread* myThread;
+    FastNoise myNoise;
+    volatile  bool myShutDownWorker = false;
+};
+
 struct World
 {
     GrowingArray<Chunk*> myChunks;
@@ -83,4 +98,6 @@ struct World
     FastNoise myNoise;
     
     Vector3i myStreamingCenterChunk;
+    
+    ChunkWorkerData myChunkWorkerData;
 };
